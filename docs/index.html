@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<!-- Authors: David Ouyang, Bryan He 2019 -->
+<html lang="en">
+<head>
+  <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.7.16">
+  <meta charset="utf-8">
+  <title>EchoNet Dynamic</title>
+  <meta name="description" content="EchoNet Dynamic: a Large New Cardiac Motion Video Data Resource for Medical Machine Learning."><!--#include file="lagunita.html" -->
+  <!--Lagunita Theme (TODO: Server side include)-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+  <script src="lagunita/js/modernizr.custom.17475.js"></script>
+  <script src="lagunita/js/bootstrap.min.js"></script>
+  <script src="lagunita/js/base.js?v=1.0"></script>
+  <script src="lagunita/js/custom.js"></script>
+  <link rel="stylesheet" href="lagunita/css/bootstrap.min.css" type="text/css">
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" type="text/css">
+  <link rel="stylesheet" href="lagunita/css/base.min.css?v=0.1" type="text/css">
+  <link rel="stylesheet" href="lagunita/css/custom.css?v=0.1" type="text/css"><!--End Lagunita Theme-->
+  <link rel="icon" type="image/ico" href="favicon.ico">
+  <style>
+    #mc_embed_signup{background:#E0E0E0; clear:left; font:14px Helvetica,Arial,sans-serif; }
+    /* Add your own Mailchimp form style overrides in your site stylesheet or in this style block.
+       We recommend moving this block and the preceding CSS link to the HEAD of your HTML file. */
+  </style>
+</head>
+<body class="site-slogan">
+  <!--#include file="header.html" -->
+  <!--Header (TODO: Server side include)-->
+  <div id="top">
+    <div class="container">
+      <!--=== Skip links ===-->
+      <div id="skip">
+        <a href="#content" onclick="$('#content').focus()">Skip to content</a>
+      </div><!-- /Skip links -->
+    </div>
+  </div>
+  <div id="brandbar">
+    <div class="container">
+      <a href="http://www.stanford.edu"><img src="lagunita/images/brandbar-stanford-logo%402x.png" alt="Stanford University" width="152" height="23"></a>
+    </div><!-- .container end -->
+  </div>
+  <div id="header" class="clearfix" role="banner">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-8">
+          <div id="signature">
+            <div id="site-name">
+              <a href="https://echonet.github.io/dynamic/index.html"><span id="site-name-1">EchoNet-Dynamic</span></a>
+            </div>
+            <div id="site-slogan">
+              <a href="https://echonet.github.io/dynamic/index.html"><span id="site_slogan">A Large New Cardiac Motion Video Data Resource for Medical Machine Learning</span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- Menu -->
+  <div id="mainmenu" class="clearfix" role="navigation">
+    <div class="container">
+      <div class="navbar navbar-default">
+        <!-- main navigation -->
+         <button type="button" class="navbar-toggle btn-navbar" data-toggle="collapse" data-target=".navbar-collapse"> <span class="menu-text">Menu</span></button> <!-- /nav-collapse -->
+        <div class="navbar-collapse collapse">
+          <div role="navigation">
+            <div id="primary-nav">
+              <ul class="nav navbar-nav" aria-label="primary navigation">
+                <li id="nav-1">
+                  <a href="index.html">Home</a>
+                </li>
+                <li id="nav-2">
+                  <a href="index.html#intro">Introduction</a>
+                </li>
+                <li id="nav-3">
+                  <a href="index.html#motivation">Motivation</a>
+                </li>
+                <li id="nav-4">
+                  <a href="index.html#dataset">Dataset</a>
+                </li>
+                <li id="nav-5">
+                  <a href="index.html#code">Code</a>
+                </li>
+                <li id="nav-6">
+                  <a href="index.html#access">Accessing Dataset</a>
+                </li>
+                <li id="nav-7">
+                  <a href="index.html#citation">Citation</a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div><!-- /nav-collapse -->
+      </div><!-- /navbar -->
+    </div><!-- /container -->
+  </div><!-- /mainmenu -->
+  <!--End Header-->
+  <div id="intro" class="container" role="introduction" tabindex="0">
+    <h2>Introduction</h2>
+    <p>Echocardiography, or cardiac ultrasound, is the most widely used and readily available imaging technique to assess cardiac function and structure. Combining rapid image acquisition, high temporal resolution, and without the risks of ionizing radiation, echocardiography serves as the backbone of cardiovascular imaging and is one of the most frequently used imaging studies in the United States. For diseases ranging from cardiomyopathies to valvular heart diseases, echocardiography is both necessary and sufﬁcient to diagnose many cardiovascular diseases. We introduce a new large video dataset of echocardiograms for computer vision research. The EchoNet-Dynamic database includes 10,036 labeled echocardiogram videos and human expert tracing to provide images to study cardiac motion and chamber volumes.</p><br>
+    <video class="center" width="320" height="320" autoplay loop muted><source src="media/Example1.mp4" type="video/mp4"></video>
+    <br>
+    <h2 id="motivation">Motivation</h2>
+    <p>Machine learning analysis of biomedical images has seen significant recent advances. In contrast, there has been much less work on medical videos, despite the fact that videos are routinely used in many clinical settings. A major bottleneck for this is the the lack of openly available and well annotated medical video data. Computer vision has benefited greatly from many open databases which allow for collaboration, comparison, and creation of medical task specific architectures. We present the EchoNet-Dynamic Dataset of 10,036 echocardiography videos, spanning the range of typical echocardiography lab imaging conditions, with corresponding labeled measurements including ejection fraction, left ventricular volume at end-systole and end-diastole, and human expert tracings of the left ventricle as an aid in studying automated approaches to evaluate cardiac function. We additionally present the performance of three 3D convolutional architectures for video classification used to
+    assess ejection fraction to near-expert human performance and as a benchmark for further collaboration, comparison, and creation of task-specific architectures. To the best of our knowledge, this is the largest labeled medical video dataset made available publicly to researchers and medical professionals and first public report of video-based 3D convolutional architectures to assess cardiac function.</p><br>
+    <br>
+    <h2 id="dataset">Dataset</h2><img class="center" width="1000" src="media/Schematic.jpg">
+    <p><b>Echocardiogram Videos</b>: A standard full resting echocardiogram study consists of a series of 50-100 videos and still images visualizing the heart from different angles, locations, and image acquisition techniques. The dataset contains 10,036 echocardiography videos from individuals who underwent echocardiography between 2006 and 2018 as part of routine clinical care at Stanford University Hospital. Each video was cropped and masked to remove text, ECG and respirometer information, and other information outside of the scanning sector. The resulting square images were either 600x600 or 768x768 pixels depending on the ultrasound machine and downsampled by cubic interpolation using OpenCV into standardized 112x112 pixel videos.</p><br>
+    <img class="center" src="media/MetaDataVariables.JPG">
+    <p><b>Measurements</b> In addition to the video itself, each study is linked to clinical measurements and calculations obtained by a registered sonographer and veriﬁed by a level 3 echocardiographer in the standard clinical workﬂow. A central metric of cardiac function is the left ventricular ejection fraction, which is used to diagnose cardiomyopathy, assess eligibility for certain chemotherapies, and determine indication for medical devices. The ejection fraction is expressed as a percentage and is the ratio of left ventricular end systolic volume (ESV) and left ventricular end diastolic volume (EDV) determined by (EDV - ESV) / EDV.</p><br>
+    <img class="center" width="200" src="media/Tracings.JPG">
+,   <p><b>Tracings</b>: In our dataset, and in standard echocardiography practice, the left ventricle is traced at the endocardial border at two separate time points representing end-systole and end-diastole for each video. Each tracing is used to estimate ventricular volume by integration of ventricular area over the length of the major axis of the ventricle.
+
+    <!--
+    <h2 id="examples">Example Videos</h2>
+    <p>
+    We show examples of our semantic segmentation for nine distinct patients below.
+    Three patients have normal cardiac function, three have low ejection fractions, and three have arrhythmia.
+    No human tracings for these patients were used by EchoNet-Dynamic.
+    </p>
+
+    <table align="center" style="table-layout:fixed;width=100%">
+      <tr>
+        <th>Normal</th>
+        <th>Low Ejection Fraction</th>
+        <th>Arrhythmia</th>
+      </tr>
+      <tr>
+        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X10A28877E97DF540.mp4" type="video/mp4"></video></td>
+        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X129133A90A61A59D.mp4" type="video/mp4"></video></td>
+        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X132C1E8DBB715D1D.mp4" type="video/mp4"></video></td>
+      </tr>
+      <tr>
+        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X10B7505562B0A702.mp4" type="video/mp4"></video></td>
+        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X13CE2039E2D706A.mp4 " type="video/mp4"></video></td>
+        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X18BA5512BE5D6FFA.mp4" type="video/mp4"></video></td>
+      </tr>
+      <tr>
+        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X1167650B8BEFF863.mp4" type="video/mp4"></video></td>
+        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X16FC9AA0AD5D8136.mp4" type="video/mp4"></video></td>
+        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X1E12EEE43FD913E5.mp4" type="video/mp4"></video></td>
+      </tr>
+    </table>
+    -->
+    <h2 id="code">Code</h2>
+    <p>Our code is available <a href="https://github.com/echonet/dynamic">here</a>.</p>
+    <br>
+    <h2 id="access">Accessing Dataset</h2>
+    <br>
+    <div class="well" id="agreement" tabindex="0">
+      <h2>Stanford University School of Medicine EchoNet-Dynamic Dataset Research Use Agreement</h2>
+      <p>By registering for downloads from the EchoNet-Dynamic Dataset, you are agreeing to this Research Use Agreement, as well as to the Terms of Use of the Stanford University School of Medicine website as posted and updated periodically at http://www.stanford.edu/site/terms/.</p>
+      <p>1. Permission is granted to view and use the EchoNet-Dynamic Dataset without charge for personal, non-commercial research purposes only. Any commercial use, sale, or other monetization is prohibited.</p>
+      <p>2. Other than the rights granted herein, the Stanford University School of Medicine (“School of Medicine”) retains all rights, title, and interest in the EchoNet-Dynamic Dataset.</p>
+      <p>3. You may make a verbatim copy of the EchoNet-Dynamic Dataset for personal, non-commercial research use as permitted in this Research Use Agreement. If another user within your organization wishes to use the EchoNet-Dynamic Dataset, they must register as an individual user and comply with all the terms of this Research Use Agreement.</p>
+      <p>4. YOU MAY NOT DISTRIBUTE, PUBLISH, OR REPRODUCE A COPY of any portion or all of the EchoNet-Dynamic Dataset to others without specific prior written permission from the School of Medicine.</p>
+      <p>5. YOU MAY NOT SHARE THE DOWNLOAD LINK to the EchoNet-Dynamic dataset to others. If another user within your organization wishes to use the EchoNet-Dynamic Dataset, they must register as an individual user and comply with all the terms of this Research Use Agreement.</p>
+      <p>6. You must not modify, reverse engineer, decompile, or create derivative works from the EchoNet-Dynamic Dataset. You must not remove or alter any copyright or other proprietary notices in the EchoNet-Dynamic Dataset.</p>
+      <p>7. The EchoNet-Dynamic Dataset has not been reviewed or approved by the Food and Drug Administration, and is for non-clinical, Research Use Only. In no event shall data or images generated through the use of the EchoNet-Dynamic Dataset be used or relied upon in the diagnosis or provision of patient care.</p>
+      <p>8. THE ECHONET-DYNAMIC DATASET IS PROVIDED "AS IS," AND STANFORD UNIVERSITY AND ITS COLLABORATORS DO NOT MAKE ANY WARRANTY, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE, NOR DO THEY ASSUME ANY LIABILITY OR RESPONSIBILITY FOR THE USE OF THIS ECHONET-DYNAMIC DATASET.</p>
+      <p>9. You will not make any attempt to re-identify any of the individual data subjects. Re-identification of individuals is strictly prohibited. Any re-identification of any individual data subject shall be immediately reported to the School of Medicine.</p>
+      <p>10. Any violation of this Research Use Agreement or other impermissible use shall be grounds for immediate termination of use of this EchoNet-Dynamic Dataset. In the event that the School of Medicine determines that the recipient has violated this Research Use Agreement or other impermissible use has been made, the School of Medicine may direct that the undersigned data recipient immediately return all copies of the EchoNet-Dynamic Dataset and retain no copies thereof even if you did not cause the violation or impermissible use.</p>
+      <p>In consideration for your agreement to the terms and conditions contained here, Stanford grants you permission to view and use the EchoNet-Dynamic Dataset for personal, non-commercial research. You may not otherwise copy, reproduce, retransmit, distribute, publish, commercially exploit or otherwise transfer any material.</p>
+      <h4>Limitation of Use</h4>
+      <p>You may use EchoNet-Dynamic Dataset for legal purposes only.</p>
+      <p>You agree to indemnify and hold Stanford harmless from any claims, losses or damages, including legal fees, arising out of or resulting from your use of the EchoNet-Dynamic Dataset or your violation or role in violation of these Terms. You agree to fully cooperate in Stanford’s defense against any such claims. These Terms shall be governed by and interpreted in accordance with the laws of California.</p>
+    </div><!-- Begin Mailchimp Signup Form -->
+    <link href="//cdn-images.mailchimp.com/embedcode/classic-10_7.css" rel="stylesheet" type="text/css">
+    <div id="mc_embed_signup">
+      <form action="https://stanford.us20.list-manage.com/subscribe/post?u=82cbf8c827fff08d3cf158136&amp;id=e6a0c4b675" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank" novalidate="">
+        <div id="mc_embed_signup_scroll">
+          <h2>Register</h2>
+          <div class="indicates-required">
+            <span class="asterisk">*</span> indicates required
+          </div>
+          <div class="mc-field-group">
+            <label for="mce-FNAME">First Name <span class="asterisk">*</span></label> <input type="text" value="" name="FNAME" class="required" id="mce-FNAME">
+          </div>
+          <div class="mc-field-group">
+            <label for="mce-LNAME">Last Name <span class="asterisk">*</span></label> <input type="text" value="" name="LNAME" class="required" id="mce-LNAME">
+          </div>
+          <div class="mc-field-group">
+            <label for="mce-MMERGE6">School / Organization <span class="asterisk">*</span></label> <input type="text" value="" name="MMERGE6" class="required" id="mce-MMERGE6">
+          </div>
+          <div class="mc-field-group">
+            <label for="mce-MMERGE8">Department</label> <input type="text" value="" name="MMERGE8" class="" id="mce-MMERGE8">
+          </div>
+          <div class="mc-field-group">
+            <label for="mce-MMERGE5">Role / Title <span class="asterisk">*</span></label> <input type="text" value="" name="MMERGE5" class="required" id="mce-MMERGE5">
+          </div>
+          <div class="mc-field-group">
+            <label for="mce-EMAIL">Email Address <span class="asterisk">*</span></label> <input type="email" value="" name="EMAIL" class="required email" id="mce-EMAIL">
+          </div>
+          <div class="mc-field-group size1of2">
+            <label for="mce-PHONE">Phone Number <span class="asterisk">*</span></label> <input type="text" name="PHONE" class="required" value="" id="mce-PHONE">
+          </div>
+          <div class="mc-address-group">
+            <div class="mc-field-group">
+              <label for="mce-ADDRESS-addr1">Physical Address <span class="asterisk">*</span></label> <input type="text" value="" maxlength="70" name="ADDRESS[addr1]" id="mce-ADDRESS-addr1" class="required">
+            </div>
+            <div class="mc-field-group">
+              <label for="mce-ADDRESS-addr2">Address Line 2</label> <input type="text" value="" maxlength="70" name="ADDRESS[addr2]" id="mce-ADDRESS-addr2">
+            </div>
+            <div class="mc-field-group size1of2">
+              <label for="mce-ADDRESS-city">City</label> <input type="text" value="" maxlength="40" name="ADDRESS[city]" id="mce-ADDRESS-city" class="required">
+            </div>
+            <div class="mc-field-group size1of2">
+              <label for="mce-ADDRESS-state">State/Province/Region</label> <input type="text" value="" maxlength="20" name="ADDRESS[state]" id="mce-ADDRESS-state" class="required">
+            </div>
+            <div class="mc-field-group size1of2">
+              <label for="mce-ADDRESS-zip">Postal / Zip Code</label> <input type="text" value="" maxlength="10" name="ADDRESS[zip]" id="mce-ADDRESS-zip" class="required">
+            </div>
+            <div class="mc-field-group size1of2">
+              <label for="mce-ADDRESS-country">Country</label> <select name="ADDRESS[country]" id="mce-ADDRESS-country" class="required">
+                <option value="164" selected>
+                  USA
+                </option>
+                <option value="286">
+                  Aaland Islands
+                </option>
+                <option value="274">
+                  Afghanistan
+                </option>
+                <option value="2">
+                  Albania
+                </option>
+                <option value="3">
+                  Algeria
+                </option>
+                <option value="178">
+                  American Samoa
+                </option>
+                <option value="4">
+                  Andorra
+                </option>
+                <option value="5">
+                  Angola
+                </option>
+                <option value="176">
+                  Anguilla
+                </option>
+                <option value="175">
+                  Antigua And Barbuda
+                </option>
+                <option value="6">
+                  Argentina
+                </option>
+                <option value="7">
+                  Armenia
+                </option>
+                <option value="179">
+                  Aruba
+                </option>
+                <option value="8">
+                  Australia
+                </option>
+                <option value="9">
+                  Austria
+                </option>
+                <option value="10">
+                  Azerbaijan
+                </option>
+                <option value="11">
+                  Bahamas
+                </option>
+                <option value="12">
+                  Bahrain
+                </option>
+                <option value="13">
+                  Bangladesh
+                </option>
+                <option value="14">
+                  Barbados
+                </option>
+                <option value="15">
+                  Belarus
+                </option>
+                <option value="16">
+                  Belgium
+                </option>
+                <option value="17">
+                  Belize
+                </option>
+                <option value="18">
+                  Benin
+                </option>
+                <option value="19">
+                  Bermuda
+                </option>
+                <option value="20">
+                  Bhutan
+                </option>
+                <option value="21">
+                  Bolivia
+                </option>
+                <option value="325">
+                  Bonaire, Saint Eustatius and Saba
+                </option>
+                <option value="22">
+                  Bosnia and Herzegovina
+                </option>
+                <option value="23">
+                  Botswana
+                </option>
+                <option value="181">
+                  Bouvet Island
+                </option>
+                <option value="24">
+                  Brazil
+                </option>
+                <option value="180">
+                  Brunei Darussalam
+                </option>
+                <option value="25">
+                  Bulgaria
+                </option>
+                <option value="26">
+                  Burkina Faso
+                </option>
+                <option value="27">
+                  Burundi
+                </option>
+                <option value="28">
+                  Cambodia
+                </option>
+                <option value="29">
+                  Cameroon
+                </option>
+                <option value="30">
+                  Canada
+                </option>
+                <option value="31">
+                  Cape Verde
+                </option>
+                <option value="32">
+                  Cayman Islands
+                </option>
+                <option value="33">
+                  Central African Republic
+                </option>
+                <option value="34">
+                  Chad
+                </option>
+                <option value="35">
+                  Chile
+                </option>
+                <option value="36">
+                  China
+                </option>
+                <option value="185">
+                  Christmas Island
+                </option>
+                <option value="37">
+                  Colombia
+                </option>
+                <option value="204">
+                  Comoros
+                </option>
+                <option value="38">
+                  Congo
+                </option>
+                <option value="183">
+                  Cook Islands
+                </option>
+                <option value="268">
+                  Costa Rica
+                </option>
+                <option value="275">
+                  Cote D'Ivoire
+                </option>
+                <option value="40">
+                  Croatia
+                </option>
+                <option value="276">
+                  Cuba
+                </option>
+                <option value="298">
+                  Curacao
+                </option>
+                <option value="41">
+                  Cyprus
+                </option>
+                <option value="42">
+                  Czech Republic
+                </option>
+                <option value="318">
+                  Democratic Republic of the Congo
+                </option>
+                <option value="43">
+                  Denmark
+                </option>
+                <option value="44">
+                  Djibouti
+                </option>
+                <option value="289">
+                  Dominica
+                </option>
+                <option value="187">
+                  Dominican Republic
+                </option>
+                <option value="45">
+                  Ecuador
+                </option>
+                <option value="46">
+                  Egypt
+                </option>
+                <option value="47">
+                  El Salvador
+                </option>
+                <option value="48">
+                  Equatorial Guinea
+                </option>
+                <option value="49">
+                  Eritrea
+                </option>
+                <option value="50">
+                  Estonia
+                </option>
+                <option value="51">
+                  Ethiopia
+                </option>
+                <option value="189">
+                  Falkland Islands
+                </option>
+                <option value="191">
+                  Faroe Islands
+                </option>
+                <option value="52">
+                  Fiji
+                </option>
+                <option value="53">
+                  Finland
+                </option>
+                <option value="54">
+                  France
+                </option>
+                <option value="193">
+                  French Guiana
+                </option>
+                <option value="277">
+                  French Polynesia
+                </option>
+                <option value="56">
+                  Gabon
+                </option>
+                <option value="57">
+                  Gambia
+                </option>
+                <option value="58">
+                  Georgia
+                </option>
+                <option value="59">
+                  Germany
+                </option>
+                <option value="60">
+                  Ghana
+                </option>
+                <option value="194">
+                  Gibraltar
+                </option>
+                <option value="61">
+                  Greece
+                </option>
+                <option value="195">
+                  Greenland
+                </option>
+                <option value="192">
+                  Grenada
+                </option>
+                <option value="196">
+                  Guadeloupe
+                </option>
+                <option value="62">
+                  Guam
+                </option>
+                <option value="198">
+                  Guatemala
+                </option>
+                <option value="270">
+                  Guernsey
+                </option>
+                <option value="63">
+                  Guinea
+                </option>
+                <option value="65">
+                  Guyana
+                </option>
+                <option value="200">
+                  Haiti
+                </option>
+                <option value="66">
+                  Honduras
+                </option>
+                <option value="67">
+                  Hong Kong
+                </option>
+                <option value="68">
+                  Hungary
+                </option>
+                <option value="69">
+                  Iceland
+                </option>
+                <option value="70">
+                  India
+                </option>
+                <option value="71">
+                  Indonesia
+                </option>
+                <option value="278">
+                  Iran
+                </option>
+                <option value="279">
+                  Iraq
+                </option>
+                <option value="74">
+                  Ireland
+                </option>
+                <option value="323">
+                  Isle of Man
+                </option>
+                <option value="75">
+                  Israel
+                </option>
+                <option value="76">
+                  Italy
+                </option>
+                <option value="202">
+                  Jamaica
+                </option>
+                <option value="78">
+                  Japan
+                </option>
+                <option value="288">
+                  Jersey (Channel Islands)
+                </option>
+                <option value="79">
+                  Jordan
+                </option>
+                <option value="80">
+                  Kazakhstan
+                </option>
+                <option value="81">
+                  Kenya
+                </option>
+                <option value="203">
+                  Kiribati
+                </option>
+                <option value="82">
+                  Kuwait
+                </option>
+                <option value="83">
+                  Kyrgyzstan
+                </option>
+                <option value="84">
+                  Lao People's Democratic Republic
+                </option>
+                <option value="85">
+                  Latvia
+                </option>
+                <option value="86">
+                  Lebanon
+                </option>
+                <option value="87">
+                  Lesotho
+                </option>
+                <option value="88">
+                  Liberia
+                </option>
+                <option value="281">
+                  Libya
+                </option>
+                <option value="90">
+                  Liechtenstein
+                </option>
+                <option value="91">
+                  Lithuania
+                </option>
+                <option value="92">
+                  Luxembourg
+                </option>
+                <option value="208">
+                  Macau
+                </option>
+                <option value="93">
+                  Macedonia
+                </option>
+                <option value="94">
+                  Madagascar
+                </option>
+                <option value="95">
+                  Malawi
+                </option>
+                <option value="96">
+                  Malaysia
+                </option>
+                <option value="97">
+                  Maldives
+                </option>
+                <option value="98">
+                  Mali
+                </option>
+                <option value="99">
+                  Malta
+                </option>
+                <option value="207">
+                  Marshall Islands
+                </option>
+                <option value="210">
+                  Martinique
+                </option>
+                <option value="100">
+                  Mauritania
+                </option>
+                <option value="212">
+                  Mauritius
+                </option>
+                <option value="241">
+                  Mayotte
+                </option>
+                <option value="101">
+                  Mexico
+                </option>
+                <option value="102">
+                  Moldova, Republic of
+                </option>
+                <option value="103">
+                  Monaco
+                </option>
+                <option value="104">
+                  Mongolia
+                </option>
+                <option value="290">
+                  Montenegro
+                </option>
+                <option value="294">
+                  Montserrat
+                </option>
+                <option value="105">
+                  Morocco
+                </option>
+                <option value="106">
+                  Mozambique
+                </option>
+                <option value="242">
+                  Myanmar
+                </option>
+                <option value="107">
+                  Namibia
+                </option>
+                <option value="108">
+                  Nepal
+                </option>
+                <option value="109">
+                  Netherlands
+                </option>
+                <option value="110">
+                  Netherlands Antilles
+                </option>
+                <option value="213">
+                  New Caledonia
+                </option>
+                <option value="111">
+                  New Zealand
+                </option>
+                <option value="112">
+                  Nicaragua
+                </option>
+                <option value="113">
+                  Niger
+                </option>
+                <option value="114">
+                  Nigeria
+                </option>
+                <option value="217">
+                  Niue
+                </option>
+                <option value="214">
+                  Norfolk Island
+                </option>
+                <option value="272">
+                  North Korea
+                </option>
+                <option value="116">
+                  Norway
+                </option>
+                <option value="117">
+                  Oman
+                </option>
+                <option value="118">
+                  Pakistan
+                </option>
+                <option value="222">
+                  Palau
+                </option>
+                <option value="282">
+                  Palestine
+                </option>
+                <option value="119">
+                  Panama
+                </option>
+                <option value="219">
+                  Papua New Guinea
+                </option>
+                <option value="120">
+                  Paraguay
+                </option>
+                <option value="121">
+                  Peru
+                </option>
+                <option value="122">
+                  Philippines
+                </option>
+                <option value="221">
+                  Pitcairn
+                </option>
+                <option value="123">
+                  Poland
+                </option>
+                <option value="124">
+                  Portugal
+                </option>
+                <option value="126">
+                  Qatar
+                </option>
+                <option value="315">
+                  Republic of Kosovo
+                </option>
+                <option value="127">
+                  Reunion
+                </option>
+                <option value="128">
+                  Romania
+                </option>
+                <option value="129">
+                  Russia
+                </option>
+                <option value="130">
+                  Rwanda
+                </option>
+                <option value="205">
+                  Saint Kitts and Nevis
+                </option>
+                <option value="206">
+                  Saint Lucia
+                </option>
+                <option value="324">
+                  Saint Martin
+                </option>
+                <option value="237">
+                  Saint Vincent and the Grenadines
+                </option>
+                <option value="132">
+                  Samoa (Independent)
+                </option>
+                <option value="227">
+                  San Marino
+                </option>
+                <option value="255">
+                  Sao Tome and Principe
+                </option>
+                <option value="133">
+                  Saudi Arabia
+                </option>
+                <option value="134">
+                  Senegal
+                </option>
+                <option value="326">
+                  Serbia
+                </option>
+                <option value="135">
+                  Seychelles
+                </option>
+                <option value="136">
+                  Sierra Leone
+                </option>
+                <option value="137">
+                  Singapore
+                </option>
+                <option value="302">
+                  Sint Maarten
+                </option>
+                <option value="138">
+                  Slovakia
+                </option>
+                <option value="139">
+                  Slovenia
+                </option>
+                <option value="223">
+                  Solomon Islands
+                </option>
+                <option value="140">
+                  Somalia
+                </option>
+                <option value="141">
+                  South Africa
+                </option>
+                <option value="257">
+                  South Georgia and the South Sandwich Islands
+                </option>
+                <option value="142">
+                  South Korea
+                </option>
+                <option value="311">
+                  South Sudan
+                </option>
+                <option value="143">
+                  Spain
+                </option>
+                <option value="144">
+                  Sri Lanka
+                </option>
+                <option value="293">
+                  Sudan
+                </option>
+                <option value="146">
+                  Suriname
+                </option>
+                <option value="225">
+                  Svalbard and Jan Mayen Islands
+                </option>
+                <option value="147">
+                  Swaziland
+                </option>
+                <option value="148">
+                  Sweden
+                </option>
+                <option value="149">
+                  Switzerland
+                </option>
+                <option value="285">
+                  Syria
+                </option>
+                <option value="152">
+                  Taiwan
+                </option>
+                <option value="260">
+                  Tajikistan
+                </option>
+                <option value="153">
+                  Tanzania
+                </option>
+                <option value="154">
+                  Thailand
+                </option>
+                <option value="233">
+                  Timor-Leste
+                </option>
+                <option value="155">
+                  Togo
+                </option>
+                <option value="232">
+                  Tonga
+                </option>
+                <option value="234">
+                  Trinidad and Tobago
+                </option>
+                <option value="156">
+                  Tunisia
+                </option>
+                <option value="157">
+                  Turkey
+                </option>
+                <option value="158">
+                  Turkmenistan
+                </option>
+                <option value="287">
+                  Turks & Caicos Islands
+                </option>
+                <option value="159">
+                  Uganda
+                </option>
+                <option value="161">
+                  Ukraine
+                </option>
+                <option value="162">
+                  United Arab Emirates
+                </option>
+                <option value="262">
+                  United Kingdom
+                </option>
+                <option value="163">
+                  Uruguay
+                </option>
+                <option value="165">
+                  Uzbekistan
+                </option>
+                <option value="239">
+                  Vanuatu
+                </option>
+                <option value="166">
+                  Vatican City State (Holy See)
+                </option>
+                <option value="167">
+                  Venezuela
+                </option>
+                <option value="168">
+                  Vietnam
+                </option>
+                <option value="169">
+                  Virgin Islands (British)
+                </option>
+                <option value="238">
+                  Virgin Islands (U.S.)
+                </option>
+                <option value="188">
+                  Western Sahara
+                </option>
+                <option value="170">
+                  Yemen
+                </option>
+                <option value="173">
+                  Zambia
+                </option>
+                <option value="174">
+                  Zimbabwe
+                </option>
+              </select>
+            </div>
+          </div>
+          <div class="mc-field-group input-group">
+            <strong>Agreement of Terms <span class="asterisk">*</span></strong>
+            <ul>
+              <li><input type="radio" value="I have read and agree to all terms and conditions as stated in the Stanford University School of Medicine Dataset Research Use Agreement and Stanford University Terms of Use for Sites." name="MMERGE7" id="mce-MMERGE7-0"><label for="mce-MMERGE7-0">I have read and agree to all terms and conditions as stated in the Stanford University School of Medicine Dataset Research Use Agreement and Stanford University Terms of Use for Sites.</label></li>
+            </ul>
+          </div>
+          <div id="mce-responses" class="clear">
+            <div class="response" id="mce-error-response" style="display:none"></div>
+            <div class="response" id="mce-success-response" style="display:none"></div>
+          </div><!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+          <div style="position: absolute; left: -5000px;" aria-hidden="true">
+            <input type="text" name="b_82cbf8c827fff08d3cf158136_e6a0c4b675" tabindex="-1" value="">
+          </div>
+          <div class="clear">
+            <input type="submit" value="Subscribe" name="subscribe" id="mc-embedded-subscribe" class="button">
+          </div>
+        </div>
+      </form>
+    </div>
+    <script type='text/javascript' src='//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js'></script>
+    <script type='text/javascript'>
+    (function($) {window.fnames = new Array(); window.ftypes = new Array();fnames[1]='FNAME';ftypes[1]='text';fnames[2]='LNAME';ftypes[2]='text';fnames[6]='MMERGE6';ftypes[6]='text';fnames[8]='MMERGE8';ftypes[8]='text';fnames[5]='MMERGE5';ftypes[5]='text';fnames[0]='EMAIL';ftypes[0]='email';fnames[4]='PHONE';ftypes[4]='phone';fnames[3]='ADDRESS';ftypes[3]='address';fnames[7]='MMERGE7';ftypes[7]='radio';}(jQuery));var $mcj = jQuery.noConflict(true);
+    </script> <!--End mc_embed_signup-->
+    <br>
+    <br>
+    <br>
+    <footer>
+      <h2 id="citation">Citation</h2>
+      <p><a href="https://www.medrxiv.org/content/10.1101/19012419v2">Interpretable Artificial Intelligence for Beat-to-Beat Cardiac Function Assessment.</a><br>David Ouyang, Bryan He, Amirata Ghorbani, Curt P. Langlotz, Paul A. Heidenreich, Robert A. Harrington, David H. Liang, Euan A. Ashley, and James Y. Zou</p>
+      <p>For inquiries, contact us at <a href="mailto:%20ouyangd@stanford.edu">ouyangd@stanford.edu</a>.</p>
+    </footer>
+  </div>
+</body>
+</html>
