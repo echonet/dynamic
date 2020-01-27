@@ -3,10 +3,8 @@ import pathlib
 import torch.utils.data
 import os
 import numpy as np
-import cv2
 import collections
 import skimage.draw
-import math
 
 class Echo(torch.utils.data.Dataset):
     def __init__(self, root=None,
@@ -42,9 +40,9 @@ class Echo(torch.utils.data.Dataset):
         self.segmentation = segmentation
         self.target_transform = target_transform
         self.external_test_location = external_test_location
-        
+
         self.fnames, self.outcome = [], []
-        
+
         if split == "external_test":
             self.fnames = sorted(os.listdir(self.external_test_location))
         elif split == "clinical_test":
@@ -69,8 +67,6 @@ class Echo(torch.utils.data.Dataset):
             self.trace = collections.defaultdict(_defaultdict_of_lists)
 
             with open(self.folder / "VolumeTracings.csv") as f:
-                header = f.readline().strip().split(",")
-
                 for (i, line) in enumerate(f):
                     filename, x1, y1, x2, y2, frame = line.strip().split(',')
                     x1 = float(x1)
@@ -90,7 +86,7 @@ class Echo(torch.utils.data.Dataset):
             self.outcome = [f for (f, k) in zip(self.outcome, keep) if k]
 
     def __getitem__(self, index):
-        
+
         if self.split == "external_test":
             video = os.path.join(self.external_test_location, self.fnames[index])
         elif self.split == "clinical_test":
