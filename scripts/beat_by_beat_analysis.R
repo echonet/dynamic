@@ -33,8 +33,10 @@ beatByBeat <- merge(sizeRelevantFrames, data, by.x = c("Filename", "Frame"), by.
 beatByBeat <- beatByBeat %>% group_by(Filename) %>% summarize(meanPrediction = mean(V3), sdPred = sd(V3))
 str(beatByBeat)
 
-ActualNumbers <- read.csv("/Users/davidouyang/Local Medical Data/IdentifiedData/LabelsAndHashes.csv")
-ActualNumbers <- ActualNumbers[c(6,7)]
+### For use, need to specify file directory
+fileLocation <- "/Users/davidouyang/Local Medical Data/"
+ActualNumbers <- read.csv(paste0(fileLocation, "FileList.csv", sep = ""))
+ActualNumbers <- ActualNumbers[c(1,2)]
 str(ActualNumbers)
 
 
