@@ -35,7 +35,7 @@ env:
   - PYTHON_VERSION=3.7 PYTORCH_VERSION=1.4 TORCHVISION_VERSION=0.2
   - PYTHON_VERSION=3.7 PYTORCH_VERSION=1.4 TORCHVISION_VERSION=0.3
   - PYTHON_VERSION=3.7 PYTORCH_VERSION=1.4 TORCHVISION_VERSION=0.4
-  - PYTHON_VERSION=3.7 PYTORCH_VERSION=1.4 TORCHVISION_VERSION=0.5
+  - PYTHON_VERSION=3.7 PYTORCH_VERSION=1.4 TORCHVISION_VERSION=0.5 
 
 install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]];
@@ -56,7 +56,7 @@ install:
   - conda info -a
   - conda search pytorch || true
 
-  - conda create -q -n test-environment python=${PYTHON_VERSION} pytorch=${PYTORCH_VERSION} torchvision=${TORCHVISION_VERSION}
+  - conda create -q -n test-environment python=${PYTHON_VERSION} pytorch=${PYTORCH_VERSION} torchvision=${TORCHVISION_VERSION} "pillow<7.0.0"
   - conda activate test-environment
   - pip install .
   - pip install flake8
