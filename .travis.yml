@@ -56,8 +56,9 @@ install:
   - conda info -a
   - conda search pytorch || true
 
-  - conda create -q -n test-environment python=${PYTHON_VERSION} pytorch=${PYTORCH_VERSION} torchvision=${TORCHVISION_VERSION} "pillow<7.0.0"
+  - conda create -q -n test-environment python=${PYTHON_VERSION}
   - conda activate test-environment
+  - pip -q pytorch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} "pillow<7.0.0"
   - pip install .
   - pip install flake8
 
