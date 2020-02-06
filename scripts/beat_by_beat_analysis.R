@@ -33,13 +33,15 @@ beatByBeat <- merge(sizeRelevantFrames, data, by.x = c("Filename", "Frame"), by.
 beatByBeat <- beatByBeat %>% group_by(Filename) %>% summarize(meanPrediction = mean(V3), sdPred = sd(V3))
 str(beatByBeat)
 
-ActualNumbers <- read.csv("/Users/davidouyang/Local Medical Data/IdentifiedData/LabelsAndHashes.csv")
-ActualNumbers <- ActualNumbers[c(6,7)]
+### For use, need to specify file directory
+fileLocation <- "/Users/davidouyang/Local Medical Data/"
+ActualNumbers <- read.csv(paste0(fileLocation, "FileList.csv", sep = ""))
+ActualNumbers <- ActualNumbers[c(1,2)]
 str(ActualNumbers)
 
 
 
-dataNoAugmentation <- merge(dataNoAugmentation, ActualNumbers, by.x = "V1", by.y = "HashedNameWithAVI", all.x = TRUE)
+dataNoAugmentation <- merge(dataNoAugmentation, ActualNumbers, by.x = "V1", by.y = "Filename", all.x = TRUE)
 dataNoAugmentation$AbsErr <- abs(dataNoAugmentation$V3 - dataNoAugmentation$EF)
 str(dataNoAugmentation)
 
@@ -54,7 +56,7 @@ summary(modelNoAugmentation)$r.squared
 # 0.79475
 
 
-beatByBeat <- merge(beatByBeat, ActualNumbers, by.x = "Filename", by.y = "HashedNameWithAVI", all.x = TRUE)
+beatByBeat <- merge(beatByBeat, ActualNumbers, by.x = "Filename", by.y = "Filename", all.x = TRUE)
 summary(abs(beatByBeat$meanPrediction - beatByBeat$EF))
 # Mean of 4.051697
 
@@ -81,7 +83,7 @@ for (i in 1:500){
 
 
 samplingBeat <-  sample_n(beatByBeatAnalysis %>% group_by(Filename), 1 + floor((i-1)/100), replace = TRUE) %>% group_by(Filename) %>% summarize(meanPred = mean(V3))
-samplingBeat <- merge(samplingBeat, ActualNumbers, by.x = "Filename", by.y = "HashedNameWithAVI", all.x = TRUE)
+samplingBeat <- merge(samplingBeat, ActualNumbers, by.x = "Filename", by.y = "Filename", all.x = TRUE)
 samplingBeat$error <- abs(samplingBeat$meanPred - samplingBeat$EF)
 
 MAEdata$sample[i] <-  1 + floor((i-1)/100)
