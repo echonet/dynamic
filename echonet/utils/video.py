@@ -2,7 +2,6 @@ import torch
 import torchvision
 import time
 import tqdm
-import cv2
 import numpy as np
 import os
 import pathlib
@@ -39,17 +38,17 @@ def run(num_epochs=45,
     pathlib.Path(output).mkdir(parents=True, exist_ok=True)
 
     model = torchvision.models.video.__dict__[modelname](pretrained=pretrained)
-    
+
     model.fc = torch.nn.Linear(model.fc.in_features, 1)
     model.fc.bias.data[0] = 55.6
     if device.type == "cuda":
         model = torch.nn.DataParallel(model)
     model.to(device)
-    optim = torch.optim.SGD(model.parameters(), lr=1e-4, momentum=0.9, weight_decay=1e-4) # Standard optimizer
+
+    optim = torch.optim.SGD(model.parameters(), lr=1e-4, momentum=0.9, weight_decay=1e-4)
     if lr_step_period is None:
         lr_step_period = math.inf
     scheduler = torch.optim.lr_scheduler.StepLR(optim, lr_step_period)
-
 
     mean, std = echonet.utils.get_mean_and_std(echonet.datasets.Echo(split="train"))
 
@@ -65,12 +64,12 @@ def run(num_epochs=45,
         indices = np.random.choice(len(train_dataset), n_train_patients, replace=False)
         train_dataset = torch.utils.data.Subset(train_dataset, indices)
 
-    train_dataloader = torch.utils.data.DataLoader(train_dataset,
-                                  batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"), drop_last=True)
-    val_dataloader = torch.utils.data.DataLoader(echonet.datasets.Echo(split="val", **kwargs),
-                                batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
-    dataloaders = {'train':train_dataloader, 'val':val_dataloader}
-    
+    train_dataloader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"), drop_last=True)
+    val_dataloader = torch.utils.data.DataLoader(
+        echonet.datasets.Echo(split="val", **kwargs), batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
+    dataloaders = {'train': train_dataloader, 'val': val_dataloader}
+
     with open(os.path.join(output, "log.csv"), "a") as f:
         epoch_resume = 0
         bestLoss = float("inf")
@@ -84,7 +83,7 @@ def run(num_epochs=45,
             f.write("Resuming from epoch {}\n".format(epoch_resume))
         except FileNotFoundError:
             f.write("Starting run from scratch\n")
-    
+
         for epoch in range(epoch_resume, num_epochs):
             print("Epoch #{}".format(epoch), flush=True)
             for phase in ['train', 'val']:
@@ -94,28 +93,28 @@ def run(num_epochs=45,
                     torch.cuda.reset_max_memory_cached(i)
                 loss, yhat, y = echonet.utils.video.run_epoch(model, dataloaders[phase], phase, optim, device)
                 f.write("{},{},{},{},{},{},{},{},{}\n".format(epoch,
-                                                           phase,
-                                                           loss,
-                                                           sklearn.metrics.r2_score(yhat, y),
-                                                           time.time() - start_time,
-                                                           y.size,
-                                                           sum(torch.cuda.max_memory_allocated() for i in range(torch.cuda.device_count())),
-                                                           sum(torch.cuda.max_memory_cached() for i in range(torch.cuda.device_count())),
-                                                           batch_size))
+                                                              phase,
+                                                              loss,
+                                                              sklearn.metrics.r2_score(yhat, y),
+                                                              time.time() - start_time,
+                                                              y.size,
+                                                              sum(torch.cuda.max_memory_allocated() for i in range(torch.cuda.device_count())),
+                                                              sum(torch.cuda.max_memory_cached() for i in range(torch.cuda.device_count())),
+                                                              batch_size))
                 f.flush()
             scheduler.step()
-    
+
             save = {
                 'epoch': epoch,
                 'state_dict': model.state_dict(),
                 'period': period,
-                'frames':frames,
+                'frames': frames,
                 'best_loss': bestLoss,
                 'loss': loss,
                 'r2': sklearn.metrics.r2_score(yhat, y),
                 'opt_dict': optim.state_dict(),
                 'scheduler_dict': scheduler.state_dict(),
-                }
+            }
             torch.save(save, os.path.join(output, "checkpoint.pt"))
             if loss < bestLoss:
                 torch.save(save, os.path.join(output, "best.pt"))
@@ -128,8 +127,8 @@ def run(num_epochs=45,
 
         if run_extra_tests:
             ds = echonet.datasets.Echo(split="nsc", **kwargs, crops="all")
-            test_dataloader = torch.utils.data.DataLoader(ds,
-                                         batch_size=1, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
+            test_dataloader = torch.utils.data.DataLoader(
+                ds, batch_size=1, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
             loss, yhat, y = echonet.utils.video.run_epoch(model, test_dataloader, "test", None, device, save_all=True, blocks=100)
 
             with open(os.path.join(output, "nsc_predictions.csv"), "w") as g:
@@ -138,8 +137,8 @@ def run(num_epochs=45,
                         g.write("{},{},{:.4f}\n".format(filename, i, p))
 
             ds = echonet.datasets.Echo(split="clinical_test", **kwargs, crops="all")
-            test_dataloader = torch.utils.data.DataLoader(ds,
-                                         batch_size=1, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
+            test_dataloader = torch.utils.data.DataLoader(
+                ds, batch_size=1, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
             loss, yhat, y = echonet.utils.video.run_epoch(model, test_dataloader, "test", None, device, save_all=True, blocks=100)
 
             with open(os.path.join(output, "clinical_test_predictions.csv"), "w") as g:
@@ -152,8 +151,9 @@ def run(num_epochs=45,
             for (block, start) in enumerate(range(0, len(ds), 1000)):
                 print("Block #{}".format(block), flush=True)
                 if not os.path.isfile(os.path.join(output, "full", "full_predictions_{}.csv".format(block))):
-                    test_dataloader = torch.utils.data.DataLoader(torch.utils.data.Subset(ds, range(start, min(start + 1000, len(ds)))),
-                                                 batch_size=1, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
+                    test_dataloader = torch.utils.data.DataLoader(
+                        torch.utils.data.Subset(ds, range(start, min(start + 1000, len(ds)))),
+                        batch_size=1, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
                     loss, yhat, y = echonet.utils.video.run_epoch(model, test_dataloader, "test", None, device, save_all=True, blocks=100)
 
                     with open(os.path.join(output, "full", "full_predictions_{}.csv".format(block)), "w") as g:
@@ -168,30 +168,31 @@ def run(num_epochs=45,
 
         if run_test:
             for split in ["val", "test"]:
-                dataloader = torch.utils.data.DataLoader(echonet.datasets.Echo(split=split, **kwargs),
-                                             batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
+                dataloader = torch.utils.data.DataLoader(
+                    echonet.datasets.Echo(split=split, **kwargs),
+                    batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
                 loss, yhat, y = echonet.utils.video.run_epoch(model, dataloader, split, None, device)
                 f.write("{} (one crop) R2:   {:.3f} ({:.3f} - {:.3f})\n".format(split, *echonet.utils.bootstrap(y, yhat, sklearn.metrics.r2_score)))
                 f.write("{} (one crop) MAE:  {:.2f} ({:.2f} - {:.2f})\n".format(split, *echonet.utils.bootstrap(y, yhat, sklearn.metrics.mean_absolute_error)))
                 f.write("{} (one crop) RMSE: {:.2f} ({:.2f} - {:.2f})\n".format(split, *tuple(map(math.sqrt, echonet.utils.bootstrap(y, yhat, sklearn.metrics.mean_squared_error)))))
                 f.flush()
-    
+
                 ds = echonet.datasets.Echo(split=split, **kwargs, crops="all")
-                dataloader = torch.utils.data.DataLoader(ds,
-                                             batch_size=1, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
+                dataloader = torch.utils.data.DataLoader(
+                    ds, batch_size=1, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
                 loss, yhat, y = echonet.utils.video.run_epoch(model, dataloader, split, None, device, save_all=True, blocks=100)
                 f.write("{} (all crops) R2:   {:.3f} ({:.3f} - {:.3f})\n".format(split, *echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.r2_score)))
                 f.write("{} (all crops) MAE:  {:.2f} ({:.2f} - {:.2f})\n".format(split, *echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.mean_absolute_error)))
                 f.write("{} (all crops) RMSE: {:.2f} ({:.2f} - {:.2f})\n".format(split, *tuple(map(math.sqrt, echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.mean_squared_error)))))
                 f.flush()
-    
+
                 with open(os.path.join(output, "{}_predictions.csv".format(split)), "w") as g:
                     for (filename, pred) in zip(ds.fnames, yhat):
                         for (i, p) in enumerate(pred):
                             g.write("{},{},{:.4f}\n".format(filename, i, p))
                 echonet.utils.latexify()
                 yhat = np.array(list(map(lambda x: x.mean(), yhat)))
-    
+
                 fig = plt.figure(figsize=(3, 3))
                 lower = min(y.min(), yhat.min())
                 upper = max(y.max(), yhat.max())
@@ -208,14 +209,14 @@ def run(num_epochs=45,
                 plt.tight_layout()
                 plt.savefig(os.path.join(output, "{}_scatter.pdf".format(split)))
                 plt.close(fig)
-                
+
                 fig = plt.figure(figsize=(3, 3))
                 plt.plot([0, 1], [0, 1], linewidth=1, color="k", linestyle="--")
                 for thresh in [35, 40, 45, 50]:
                     fpr, tpr, _ = sklearn.metrics.roc_curve(y > thresh, yhat)
                     print(thresh, sklearn.metrics.roc_auc_score(y > thresh, yhat))
                     plt.plot(fpr, tpr)
-                
+
                 plt.axis([-0.01, 1.01, -0.01, 1.01])
                 plt.xlabel("False Positive Rate")
                 plt.ylabel("True Positive Rate")
@@ -226,7 +227,7 @@ def run(num_epochs=45,
 
 def run_epoch(model, dataloader, phase, optim, device, save_all=False, blocks=None):
 
-    criterion = torch.nn.MSELoss() # Standard L2 loss
+    criterion = torch.nn.MSELoss()  # Standard L2 loss
 
     runningloss = 0.0
 
@@ -265,8 +266,7 @@ def run_epoch(model, dataloader, phase, optim, device, save_all=False, blocks=No
 
                 if average:
                     outputs = outputs.view(batch, n_crops, -1).mean(1)
-                    print(outputs)
-                
+
                 if not save_all:
                     yhat.append(outputs.view(-1).to("cpu").detach().numpy())
 
@@ -284,7 +284,7 @@ def run_epoch(model, dataloader, phase, optim, device, save_all=False, blocks=No
 
                 # str(i, runningloss, epoch_loss,  str(((summer_squared) / counter - (summer / counter)**2).item()))
 
-                pbar.set_postfix_str("{:.2f} ({:.2f}) / {:.2f}".format(epoch_loss,  loss.item(), summer_squared / counter - (summer / counter) ** 2))
+                pbar.set_postfix_str("{:.2f} ({:.2f}) / {:.2f}".format(epoch_loss, loss.item(), summer_squared / counter - (summer / counter) ** 2))
                 pbar.update()
 
     if not save_all:

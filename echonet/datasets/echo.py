@@ -3,10 +3,9 @@ import pathlib
 import torch.utils.data
 import os
 import numpy as np
-import cv2
 import collections
 import skimage.draw
-import math
+
 
 class Echo(torch.utils.data.Dataset):
     def __init__(self, root=None,
@@ -19,8 +18,8 @@ class Echo(torch.utils.data.Dataset):
                  noise=None,
                  segmentation=None,
                  target_transform=None,
-                 external_test_location = None
-                ):
+                 external_test_location=None
+    ):
         """length = None means take all possible"""
 
         if root is None:
@@ -42,9 +41,9 @@ class Echo(torch.utils.data.Dataset):
         self.segmentation = segmentation
         self.target_transform = target_transform
         self.external_test_location = external_test_location
-        
+
         self.fnames, self.outcome = [], []
-        
+
         if split == "external_test":
             self.fnames = sorted(os.listdir(self.external_test_location))
         elif split == "clinical_test":
@@ -90,7 +89,7 @@ class Echo(torch.utils.data.Dataset):
             self.outcome = [f for (f, k) in zip(self.outcome, keep) if k]
 
     def __getitem__(self, index):
-        
+
         if self.split == "external_test":
             video = os.path.join(self.external_test_location, self.fnames[index])
         elif self.split == "clinical_test":
@@ -117,7 +116,7 @@ class Echo(torch.utils.data.Dataset):
             video = (video - self.mean.reshape(3, 1, 1, 1)) / self.std.reshape(3, 1, 1, 1)
 
         c, f, h, w = video.shape
-        if self.length == None:
+        if self.length is None:
             length = f // self.period
         else:
             length = self.length
@@ -167,8 +166,8 @@ class Echo(torch.utils.data.Dataset):
                     target.append(np.float32(self.outcome[index][self.header.index(t)]))
 
         if self.segmentation is not None:
-             seg = np.load(os.path.join(self.segmentation, os.path.splitext(self.fnames[index])[0] + ".npy"))
-             video[2, :seg.shape[0], :, :] = seg
+            seg = np.load(os.path.join(self.segmentation, os.path.splitext(self.fnames[index])[0] + ".npy"))
+            video[2, :seg.shape[0], :, :] = seg
 
         if target != []:
             target = tuple(target) if len(target) > 1 else target[0]
@@ -193,6 +192,7 @@ class Echo(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.fnames)
+
 
 def _defaultdict_of_lists():
     return collections.defaultdict(list)

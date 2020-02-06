@@ -1,10 +1,8 @@
 import torch
-import time
 import tqdm
 import cv2
 import numpy as np
 import os
-import PIL
 import matplotlib
 matplotlib.use('agg')
 
@@ -22,7 +20,7 @@ def loadvideo(filename):
     frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     # empty numpy array of appropriate length, fill in when possible from front
-    video = np.zeros((frame_count, frame_width, frame_height, 3), np.float32)
+    v = np.zeros((frame_count, frame_width, frame_height, 3), np.float32)
 
     for count in range(frame_count):
         ret, frame = capture.read()
@@ -30,20 +28,20 @@ def loadvideo(filename):
             raise ValueError("Failed to load frame #{} of {}.".format(count, filename))
 
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        video[count] = frame
+        v[count] = frame
 
-    video = video.transpose((3, 0, 1, 2))
+    v = v.transpose((3, 0, 1, 2))
 
-    return video
+    return v
 
 
 def savevideo(filename, array, fps=1):
     c, f, height, width = array.shape
-    fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
+    fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
     out = cv2.VideoWriter(filename, fourcc, fps, (width, height))
-    
+
     for i in range(f):
-        out.write(array[:, i, :, :].transpose((1,2,0)))
+        out.write(array[:, i, :, :].transpose((1, 2, 0)))
 
 
 def get_mean_and_std(dataset, samples=10):
@@ -61,7 +59,7 @@ def get_mean_and_std(dataset, samples=10):
         std += torch.sum(x ** 2, dim=1).numpy()
     mean /= n
     std = np.sqrt(std / n - mean ** 2)
-    
+
     mean = mean.astype(np.float32)
     std = std.astype(np.float32)
 
@@ -96,13 +94,8 @@ def latexify():
     matplotlib.rcParams.update(params)
 
 
-# Based on the Pytorch Imagenet example
-# https://github.com/pytorch/examples/blob/ee964a2eeb41e1712fe719b83645c79bcbd0ba1a/imagenet/main.py#L400
-def adjust_learning_rate(optimizer, scale):
-    """Multiplies the learning rate by the specified amount."""
-    lr = args.lr * (0.1 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-
 def dice_similarity_coefficient(inter, union):
     return 2 * sum(inter) / (sum(union) + sum(inter))
+
+
+__all__ = [video, segmentation, loadvideo, savevideo, get_mean_and_std, bootstrap, latexify, dice_similarity_coefficient]

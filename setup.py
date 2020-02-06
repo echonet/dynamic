@@ -3,7 +3,6 @@
 
 import setuptools
 import os
-import subprocess
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -14,7 +13,7 @@ setuptools.setup(
     name="echonet",
     description="Interpretable AI for beat-to-beat cardiac function assessment.",
     version=__version__,
-    url="https://douyang.github.io/EchoNetDynamic/",
+    url="https://echonet.github.io/dynamic",
     packages=setuptools.find_packages(),
     install_requires=[
         "numpy",
@@ -29,4 +28,3 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
     ]
 )
-
