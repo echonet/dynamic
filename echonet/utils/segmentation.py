@@ -10,6 +10,7 @@ import tqdm
 import scipy.signal
 import time
 
+
 def run(num_epochs=50,
         modelname="deeplabv3_resnet50",
         pretrained=False,
@@ -42,7 +43,8 @@ def run(num_epochs=50,
     if device.type == "cuda":
         model = torch.nn.DataParallel(model)
     model.to(device)
-    optim = torch.optim.SGD(model.parameters(), lr=1e-5, momentum=0.9) # Standard optimizer
+
+    optim = torch.optim.SGD(model.parameters(), lr=1e-5, momentum=0.9)
     if lr_step_period is None:
         lr_step_period = math.inf
     scheduler = torch.optim.lr_scheduler.StepLR(optim, lr_step_period)
@@ -58,10 +60,10 @@ def run(num_epochs=50,
         indices = np.random.choice(len(train_dataset), n_train_patients, replace=False)
         train_dataset = torch.utils.data.Subset(train_dataset, indices)
 
-    train_dataloader = torch.utils.data.DataLoader(train_dataset,
-                                  batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"), drop_last=True)
-    val_dataloader = torch.utils.data.DataLoader(echonet.datasets.Echo(split="val", **kwargs),
-                                batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
+    train_dataloader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"), drop_last=True)
+    val_dataloader = torch.utils.data.DataLoader(
+        echonet.datasets.Echo(split="val", **kwargs), batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
     dataloaders = {'train': train_dataloader, 'val': val_dataloader}
 
     with open(os.path.join(output, "log.csv"), "a") as f:
@@ -91,16 +93,16 @@ def run(num_epochs=50,
                 large_dice = 2 * large_inter.sum() / (large_union.sum() + large_inter.sum())
                 small_dice = 2 * small_inter.sum() / (small_union.sum() + small_inter.sum())
                 f.write("{},{},{},{},{},{},{},{},{},{},{}\n".format(epoch,
-                                                                 phase,
-                                                                 loss,
-                                                                 overall_dice,
-                                                                 large_dice,
-                                                                 small_dice,
-                                                                 time.time() - start_time,
-                                                                 large_inter.size,
-                                                                 sum(torch.cuda.max_memory_allocated() for i in range(torch.cuda.device_count())),
-                                                                 sum(torch.cuda.max_memory_cached() for i in range(torch.cuda.device_count())),
-                                                                 batch_size))
+                                                                    phase,
+                                                                    loss,
+                                                                    overall_dice,
+                                                                    large_dice,
+                                                                    small_dice,
+                                                                    time.time() - start_time,
+                                                                    large_inter.size,
+                                                                    sum(torch.cuda.max_memory_allocated() for i in range(torch.cuda.device_count())),
+                                                                    sum(torch.cuda.max_memory_cached() for i in range(torch.cuda.device_count())),
+                                                                    batch_size))
                 f.flush()
             scheduler.step()
 
@@ -111,7 +113,7 @@ def run(num_epochs=50,
                 'loss': loss,
                 'opt_dict': optim.state_dict(),
                 'scheduler_dict': scheduler.state_dict(),
-                }
+            }
             torch.save(save, os.path.join(output, "checkpoint.pt"))
             if loss < bestLoss:
                 torch.save(save, os.path.join(output, "best.pt"))
@@ -272,19 +274,19 @@ def run_epoch(model, dataloader, phase, optim, device):
                 large_trace = large_trace.to(device)
                 y_large = model(large_frame)["out"]
                 loss_large = torch.nn.functional.binary_cross_entropy_with_logits(y_large[:, 0, :, :], large_trace, reduction="sum")
-                large_inter += np.logical_and(y_large[:, 0, :, :].detach().cpu().numpy() > 0. , large_trace[:, :, :].detach().cpu().numpy() > 0.).sum()
-                large_union += np.logical_or(y_large[:, 0, :, :].detach().cpu().numpy() > 0. , large_trace[:, :, :].detach().cpu().numpy() > 0.).sum()
-                large_inter_list.extend(np.logical_and(y_large[:, 0, :, :].detach().cpu().numpy() > 0. , large_trace[:, :, :].detach().cpu().numpy() > 0.).sum(2).sum(1))
-                large_union_list.extend(np.logical_or(y_large[:, 0, :, :].detach().cpu().numpy() > 0. , large_trace[:, :, :].detach().cpu().numpy() > 0.).sum(2).sum(1))
+                large_inter += np.logical_and(y_large[:, 0, :, :].detach().cpu().numpy() > 0., large_trace[:, :, :].detach().cpu().numpy() > 0.).sum()
+                large_union += np.logical_or(y_large[:, 0, :, :].detach().cpu().numpy() > 0., large_trace[:, :, :].detach().cpu().numpy() > 0.).sum()
+                large_inter_list.extend(np.logical_and(y_large[:, 0, :, :].detach().cpu().numpy() > 0., large_trace[:, :, :].detach().cpu().numpy() > 0.).sum(2).sum(1))
+                large_union_list.extend(np.logical_or(y_large[:, 0, :, :].detach().cpu().numpy() > 0., large_trace[:, :, :].detach().cpu().numpy() > 0.).sum(2).sum(1))
 
                 small_frame = small_frame.to(device)
                 small_trace = small_trace.to(device)
                 y_small = model(small_frame)["out"]
                 loss_small = torch.nn.functional.binary_cross_entropy_with_logits(y_small[:, 0, :, :], small_trace, reduction="sum")
-                small_inter += np.logical_and(y_small[:, 0, :, :].detach().cpu().numpy() > 0. , small_trace[:, :, :].detach().cpu().numpy() > 0.).sum()
-                small_union += np.logical_or(y_small[:, 0, :, :].detach().cpu().numpy() > 0. , small_trace[:, :, :].detach().cpu().numpy() > 0.).sum()
-                small_inter_list.extend(np.logical_and(y_small[:, 0, :, :].detach().cpu().numpy() > 0. , small_trace[:, :, :].detach().cpu().numpy() > 0.).sum(2).sum(1))
-                small_union_list.extend(np.logical_or(y_small[:, 0, :, :].detach().cpu().numpy() > 0. , small_trace[:, :, :].detach().cpu().numpy() > 0.).sum(2).sum(1))
+                small_inter += np.logical_and(y_small[:, 0, :, :].detach().cpu().numpy() > 0., small_trace[:, :, :].detach().cpu().numpy() > 0.).sum()
+                small_union += np.logical_or(y_small[:, 0, :, :].detach().cpu().numpy() > 0., small_trace[:, :, :].detach().cpu().numpy() > 0.).sum()
+                small_inter_list.extend(np.logical_and(y_small[:, 0, :, :].detach().cpu().numpy() > 0., small_trace[:, :, :].detach().cpu().numpy() > 0.).sum(2).sum(1))
+                small_union_list.extend(np.logical_or(y_small[:, 0, :, :].detach().cpu().numpy() > 0., small_trace[:, :, :].detach().cpu().numpy() > 0.).sum(2).sum(1))
 
                 pos += (large_trace == 1).sum().item()
                 pos += (small_trace == 1).sum().item()
