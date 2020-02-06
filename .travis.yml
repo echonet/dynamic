@@ -64,5 +64,5 @@ install:
 
 script:
   - flake8
-  - pip list
+  - pylint
   - python -c "import echonet"
