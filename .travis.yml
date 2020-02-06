@@ -34,4 +34,5 @@ install:
   - pip install .
 
 script:
+  - python -c "import torch, torchvision; print(torch.__version__, torchvision.__version__)"
   - python -c "import echonet"
