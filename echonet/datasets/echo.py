@@ -18,8 +18,7 @@ class Echo(torch.utils.data.Dataset):
                  noise=None,
                  segmentation=None,
                  target_transform=None,
-                 external_test_location=None
-    ):
+                 external_test_location=None):
         """length = None means take all possible"""
 
         if root is None:
