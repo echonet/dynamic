@@ -1,0 +1,37 @@
+language: minimal
+
+os:
+  - linux
+  - osx
+
+env:
+  - PYTHON_VERSION=3.6 PYTORCH_VERSION=1.1
+  - PYTHON_VERSION=3.6 PYTORCH_VERSION=1.2
+  - PYTHON_VERSION=3.7 PYTORCH_VERSION=1.1
+  - PYTHON_VERSION=3.7 PYTORCH_VERSION=1.2
+
+install:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]];
+    then
+        MINICONDA_OS=Linux;
+        sudo apt-get update;
+    else
+        MINICONDA_OS=MacOSX;
+        brew update;
+    fi
+  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-${MINICONDA_OS}-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - source "$HOME/miniconda/etc/profile.d/conda.sh"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+  - conda search pytorch || true
+
+  - conda create -q -n test-environment python=${PYTHON_VERSION} pytorch=${PYTORCH_VERSION}
+  - conda activate test-environment
+  - pip install .
+
+script:
+  - python -c "import echonet"
