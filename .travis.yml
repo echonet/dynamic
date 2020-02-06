@@ -36,5 +36,5 @@ install:
 
 script:
   - flake8
-  - python -c "import torch, torchvision; print(torch.__version__, torchvision.__version__)"
+  - pip list
   - python -c "import echonet"
