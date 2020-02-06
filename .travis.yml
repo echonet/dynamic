@@ -2,7 +2,6 @@ language: minimal
 
 os:
   - linux
-  - osx
 
 env:
   - PYTHON_VERSION=3.6 PYTORCH_VERSION=1.1
