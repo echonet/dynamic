@@ -63,6 +63,6 @@ install:
   - pip install -q flake8 pylint
 
 script:
-  - flake8
-  - pylint
+  - flake8 --ignore=E501
+  - pylint --disable=C0301 echonet/
   - python -c "import echonet"
