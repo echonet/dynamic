@@ -60,7 +60,7 @@ install:
   - conda activate test-environment
   - pip install -q torchvision==${TORCHVISION_VERSION} "pillow<7.0.0"
   - pip install -q .
-  - pip install -q flake8
+  - pip install -q flake8 pylint
 
 script:
   - flake8
