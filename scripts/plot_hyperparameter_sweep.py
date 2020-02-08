@@ -22,21 +22,6 @@ def load(model, frames, period, pretrained):
     except:
         pass
 
-fig = plt.figure(figsize=(1.75, 2.75))
-
-for (model, color) in zip(["EchoNet-Dynamic (EF)", "R3D", "MC3"], matplotlib.colors.TABLEAU_COLORS):
-    plt.plot([float("nan")], [float("nan")], "-", color=color, label=model)
-plt.plot([float("nan")], [float("nan")], "-", color="k", label="Pretrained")
-plt.plot([float("nan")], [float("nan")], "--", color="k", mfc="none", label="Random")
-plt.title("")
-plt.axis("off")
-plt.legend(loc="center")
-plt.tight_layout()
-plt.savefig(os.path.join(fig_root, "legend.pdf"))
-plt.savefig(os.path.join(fig_root, "legend.eps"))
-plt.savefig(os.path.join(fig_root, "legend.png"))
-plt.close(fig)
-
 print("FRAMES")
 FRAMES = [1, 8, 16, 32, 64, 96, None]
 MAX = FRAMES[-2]
@@ -47,8 +32,21 @@ TERM1 = 120
 ALL = 128
 END = 135
 RATIO = (BREAK - START) / (END - BREAK)
-fig = plt.figure(figsize=(3.0, 2.75))
-gs = matplotlib.gridspec.GridSpec(1, 2, width_ratios=[RATIO, 1])
+
+fig = plt.figure(figsize=(3 + 2.5 + 1.5, 2.75))
+outer = matplotlib.gridspec.GridSpec(1, 3, width_ratios=[3, 2.5, 1.50])
+ax = plt.subplot(outer[2])
+ax2 = plt.subplot(outer[1])
+gs = matplotlib.gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=outer[0], width_ratios=[RATIO, 1], wspace=0.020) 
+
+for (model, color) in zip(["EchoNet-Dynamic (EF)", "R3D", "MC3"], matplotlib.colors.TABLEAU_COLORS):
+    ax.plot([float("nan")], [float("nan")], "-", color=color, label=model)
+ax.plot([float("nan")], [float("nan")], "-", color="k", label="Pretrained")
+ax.plot([float("nan")], [float("nan")], "--", color="k", mfc="none", label="Random")
+ax.set_title("")
+ax.axis("off")
+ax.legend(loc="center")
+
 ax0 = plt.subplot(gs[0])
 ax1 = plt.subplot(gs[1], sharey=ax0)
 for (model, color) in zip(["r2plus1d_18", "r3d_18", "mc3_18"], matplotlib.colors.TABLEAU_COLORS):
@@ -100,20 +98,12 @@ ax1.plot((-scale * d,scale * d),(1-d,1+d), **kwargs) # bottom-right diagonal
 #        matplotlib.transforms.IdentityTransform(), fig.transFigure # specify x, y transform
 #        )) # changed from default blend (IdentityTransform(), a[0].transAxes)
 ax0.xaxis.label.set_position((0.6, 0.0))
-ax0.text(0.05, 0.95, "(a)", transform=fig.transFigure)
+ax0.text(-0.05, 1.10, "(a)", transform=ax0.transAxes)
 ax0.set_xlabel("Clip length (frames)")
-
 ax0.set_ylabel("Validation Loss")
-gs.tight_layout(fig)
-gs.update(wspace=0.020) # set the spacing between axes.
-plt.savefig(os.path.join(fig_root, "length.pdf"))
-plt.savefig(os.path.join(fig_root, "length.eps"))
-plt.savefig(os.path.join(fig_root, "length.png"))
-plt.close(fig)
 
 print("PERIOD")
 PERIOD = [1, 2, 4, 6, 8]
-fig = plt.figure(figsize=(2.5, 2.75))
 
 for (model, color) in zip(["r2plus1d_18", "r3d_18", "mc3_18"], matplotlib.colors.TABLEAU_COLORS):
     for pretrained in [True, False]:
@@ -121,14 +111,13 @@ for (model, color) in zip(["r2plus1d_18", "r3d_18", "mc3_18"], matplotlib.colors
         print(model, pretrained)
         print(list(map(lambda x: "{:.1f}".format(x) if x is not None else None, loss)))
 
-        plt.plot(PERIOD, loss, "-" if pretrained else "--",  marker=".", color=color)
-plt.xticks(PERIOD)
-plt.text(0.05, 0.95, "(b)", transform=fig.transFigure)
-plt.xlabel("Sampling Period (frames)")
-plt.ylabel("Validation Loss")
+        ax2.plot(PERIOD, loss, "-" if pretrained else "--",  marker=".", color=color)
+ax2.set_xticks(PERIOD)
+ax2.text(-0.05, 1.10, "(b)", transform=ax2.transAxes)
+ax2.set_xlabel("Sampling Period (frames)")
+ax2.set_ylabel("Validation Loss")
 plt.tight_layout()
-plt.savefig(os.path.join(fig_root, "period.pdf"))
-plt.savefig(os.path.join(fig_root, "period.eps"))
-plt.savefig(os.path.join(fig_root, "period.png"))
+plt.savefig(os.path.join(fig_root, "hyperparameter.pdf"))
+plt.savefig(os.path.join(fig_root, "hyperparameter.eps"))
+plt.savefig(os.path.join(fig_root, "hyperparameter.png"))
 plt.close(fig)
-

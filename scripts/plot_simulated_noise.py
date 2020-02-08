@@ -24,44 +24,46 @@ def main():
     try:
         with open(filename, "rb") as f:
             Y, YHAT, INTER, UNION = pickle.load(f)
+        asd
     except:
         os.makedirs(fig_root, exist_ok=True)
 
-        # Load trained video model
-        model_v = torchvision.models.video.r2plus1d_18()
-        model_v.fc = torch.nn.Linear(model_v.fc.in_features, 1)
-        if device.type == "cuda":
-            model_v = torch.nn.DataParallel(model_v)
-        model_v.to(device)
+        # # Load trained video model
+        # model_v = torchvision.models.video.r2plus1d_18()
+        # model_v.fc = torch.nn.Linear(model_v.fc.in_features, 1)
+        # if device.type == "cuda":
+        #     model_v = torch.nn.DataParallel(model_v)
+        # model_v.to(device)
 
-        checkpoint = torch.load(os.path.join(video_output, "checkpoint.pt"))
-        model_v.load_state_dict(checkpoint['state_dict'])
+        # checkpoint = torch.load(os.path.join(video_output, "checkpoint.pt"))
+        # model_v.load_state_dict(checkpoint['state_dict'])
 
-        # Load trained segmentation model
-        model_s = torchvision.models.segmentation.deeplabv3_resnet50(aux_loss=False)
-        model_s.classifier[-1] = torch.nn.Conv2d(model_s.classifier[-1].in_channels, 1, kernel_size=model_s.classifier[-1].kernel_size)
-        if device.type == "cuda":
-            model_s = torch.nn.DataParallel(model_s)
-        model_s.to(device)
+        # # Load trained segmentation model
+        # model_s = torchvision.models.segmentation.deeplabv3_resnet50(aux_loss=False)
+        # model_s.classifier[-1] = torch.nn.Conv2d(model_s.classifier[-1].in_channels, 1, kernel_size=model_s.classifier[-1].kernel_size)
+        # if device.type == "cuda":
+        #     model_s = torch.nn.DataParallel(model_s)
+        # model_s.to(device)
 
-        checkpoint = torch.load(os.path.join(seg_output, "checkpoint.pt"))
-        model_s.load_state_dict(checkpoint['state_dict'])
+        # checkpoint = torch.load(os.path.join(seg_output, "checkpoint.pt"))
+        # model_s.load_state_dict(checkpoint['state_dict'])
 
-        dice = []
-        mse = []
-        r2 = []
-        Y = []
-        YHAT = []
-        INTER = []
-        UNION = []
+        # dice = []
+        # mse = []
+        # r2 = []
+        # Y = []
+        # YHAT = []
+        # INTER = []
+        # UNION = []
         for noise in NOISE:
-            Y.append([])
-            YHAT.append([])
-            INTER.append([])
-            UNION.append([])
+            # Y.append([])
+            # YHAT.append([])
+            # INTER.append([])
+            # UNION.append([])
             
             dataset = echonet.datasets.Echo(split="test", noise=noise)
             PIL.Image.fromarray(dataset[0][0][:, 0, :, :].astype(np.uint8).transpose(1, 2, 0)).save(os.path.join(fig_root, "noise_{}.tif".format(round(100 * noise))))
+            continue
 
             mean, std = echonet.utils.get_mean_and_std(echonet.datasets.Echo(split="train"))
 
@@ -102,13 +104,15 @@ def main():
             Y[-1].extend(y.tolist())
             YHAT[-1].extend(yhat.tolist())
 
-        with open(filename, "wb") as f:
-            pickle.dump((Y, YHAT, INTER, UNION), f)
+        # with open(filename, "wb") as f:
+        #     pickle.dump((Y, YHAT, INTER, UNION), f)
 
     echonet.utils.latexify()
 
     NOISE = list(map(lambda x: round(100 * x), NOISE))
-    fig, ax = plt.subplots(3, figsize=(6.5, 4.5))
+    fig = plt.figure(figsize=(6.50, 4.75))
+    gs = matplotlib.gridspec.GridSpec(3, 1, height_ratios=[2.0, 2.0, 0.75])
+    ax = (plt.subplot(gs[0]), plt.subplot(gs[1]), plt.subplot(gs[2]))
 
     r2 = [sklearn.metrics.r2_score(y, yhat) for (y, yhat) in zip(Y, YHAT)]
     ax[0].plot(NOISE, r2, color="k", linewidth=1, marker=".")
@@ -129,15 +133,15 @@ def main():
     for noise in NOISE:
         image = matplotlib.image.imread(os.path.join(fig_root, "noise_{}.tif".format(noise)))
         imagebox = matplotlib.offsetbox.OffsetImage(image, zoom=0.4)
-        ab = matplotlib.offsetbox.AnnotationBbox(imagebox, (noise, 0.5), frameon=False)
+        ab = matplotlib.offsetbox.AnnotationBbox(imagebox, (noise, 0.0), frameon=False)
         ax[2].add_artist(ab)
         ax[2].axis("off")
-    ax[2].axis([min(NOISE) - 5, max(NOISE) + 5, 0, 1])
+    ax[2].axis([min(NOISE) - 5, max(NOISE) + 5, -1, 1])
 
     fig.tight_layout()
-    fig.subplots_adjust(hspace=0.1)
+    # fig.subplots_adjust(hspace=0.1)
     plt.savefig(os.path.join(fig_root, "noise.pdf"), dpi=1200)
-    plt.savefig(os.path.join(fig_root, "noise.eps"), dpi=1200)
+    plt.savefig(os.path.join(fig_root, "noise.eps"), dpi=300)
     plt.savefig(os.path.join(fig_root, "noise.png"), dpi=600)
     plt.close(fig)
 

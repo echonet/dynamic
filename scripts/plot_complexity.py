@@ -28,19 +28,17 @@ def load(model, frames, period, pretrained, split):
                 batch_size = int(batch_size)
                 return time, n, mem_allocated, mem_cached, batch_size
 
-fig = plt.figure(figsize=(1.75, 2.75))
+fig = plt.figure(figsize=(6.50, 2.50))
+gs = matplotlib.gridspec.GridSpec(1, 3, width_ratios=[2.5, 2.5, 1.50])
+ax = (plt.subplot(gs[0]), plt.subplot(gs[1]), plt.subplot(gs[2]))
+
 for (model, color) in zip(["EchoNet-Dynamic (EF)", "R3D", "MC3"], matplotlib.colors.TABLEAU_COLORS):
-    plt.plot([float("nan")], [float("nan")], "-", color=color, label=model)
-plt.title("")
-plt.axis("off")
-plt.legend(loc="center")
-plt.tight_layout()
-plt.savefig(os.path.join(fig_root, "legend.pdf"))
-plt.savefig(os.path.join(fig_root, "legend.png"))
-plt.close(fig)
+    ax[2].plot([float("nan")], [float("nan")], "-", color=color, label=model)
+ax[2].set_title("")
+ax[2].axis("off")
+ax[2].legend(loc="center")
 
 FRAMES = [1, 8, 16, 32, 64, 96]
-fig = [plt.figure(figsize=(2.5, 2.75)) for _ in range(3)]
 pretrained = True
 for (model, color) in zip(["r2plus1d_18", "r3d_18", "mc3_18"], matplotlib.colors.TABLEAU_COLORS):
     # for split in ["val", "train"]:
@@ -55,33 +53,25 @@ for (model, color) in zip(["r2plus1d_18", "r3d_18", "mc3_18"], matplotlib.colors
         mem_cached = np.array(list(map(lambda x: x[3], data)))
         batch_size = np.array(list(map(lambda x: x[4], data)))
 
-        plt.figure(fig[0].number)
-        plt.plot(FRAMES, time / n, "-" if pretrained else "--",  marker=".", color=color, linewidth=(1 if split == "train" else None))
+        ax[0].plot(FRAMES, time / n, "-" if pretrained else "--",  marker=".", color=color, linewidth=(1 if split == "train" else None))
         print("\n".join(map(lambda x: "{:2d}: {:f}".format(*x), zip(FRAMES, time / n))))
         print()
 
-        plt.figure(fig[1].number)
-        plt.plot(FRAMES, mem_allocated / batch_size / 1e9, "-" if pretrained else "--",  marker=".", color=color, linewidth=(1 if split == "train" else None))
+        ax[1].plot(FRAMES, mem_allocated / batch_size / 1e9, "-" if pretrained else "--",  marker=".", color=color, linewidth=(1 if split == "train" else None))
         print("\n".join(map(lambda x: "{:2d}: {:f}".format(*x), zip(FRAMES, mem_allocated / batch_size / 1e9))))
         print()
 
-plt.figure(fig[0].number)
-plt.xticks(FRAMES)
-plt.text(0.05, 0.95, "(a)", transform=fig[0].transFigure)
-plt.xlabel("Clip length (frames)")
-plt.ylabel("Time Per Clip (seconds)")
-plt.tight_layout()
-plt.savefig(os.path.join(fig_root, "time.pdf"))
-plt.savefig(os.path.join(fig_root, "time.png"))
+ax[0].set_xticks(FRAMES)
+ax[0].text(-0.05, 1.10, "(a)", transform=ax[0].transAxes)
+ax[0].set_xlabel("Clip length (frames)")
+ax[0].set_ylabel("Time Per Clip (seconds)")
 
-plt.figure(fig[1].number)
-plt.xticks(FRAMES)
-plt.text(0.05, 0.95, "(b)", transform=fig[1].transFigure)
-plt.xlabel("Clip length (frames)")
-plt.ylabel("Memory Per Clip (GB)")
-plt.tight_layout()
-plt.savefig(os.path.join(fig_root, "mem.pdf"))
-plt.savefig(os.path.join(fig_root, "mem.png"))
+ax[1].set_xticks(FRAMES)
+ax[1].text(-0.05, 1.10, "(b)", transform=ax[1].transAxes)
+ax[1].set_xlabel("Clip length (frames)")
+ax[1].set_ylabel("Memory Per Clip (GB)")
 
-for f in fig:
-    plt.close(f)
+plt.tight_layout()
+plt.savefig(os.path.join(fig_root, "complexity.pdf"))
+plt.savefig(os.path.join(fig_root, "complexity.eps"))
+plt.close(fig)

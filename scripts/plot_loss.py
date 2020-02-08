@@ -65,6 +65,7 @@ def main():
 
     plt.tight_layout()
     plt.savefig(os.path.join(args.fig, "loss.pdf"))
+    plt.savefig(os.path.join(args.fig, "loss.eps"))
     plt.savefig(os.path.join(args.fig, "loss.png"))
     plt.close(fig)
 
