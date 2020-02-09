@@ -1,10 +1,13 @@
+"""Utility functions for videos, plotting and computing performance metrics."""
+
+import os
+import typing
+
+import cv2  # pytype: disable=attribute-error
+import matplotlib
+import numpy as np
 import torch
 import tqdm
-import cv2  # pytype: disable=attribute-error
-import numpy as np
-import os
-import matplotlib
-# matplotlib.use('agg')
 
 from . import video
 from . import segmentation
@@ -18,7 +21,7 @@ def loadvideo(filename: str) -> np.ndarray:
 
     Returns:
         A np.ndarray with dimensions (channels=3, frames, height, width). The
-        values will be float32's ranging from 0 to 255.
+        values will be uint8's ranging from 0 to 255.
 
     Raises:
         FileNotFoundError: Could not find `filename`
@@ -33,7 +36,7 @@ def loadvideo(filename: str) -> np.ndarray:
     frame_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    v = np.zeros((frame_count, frame_width, frame_height, 3), np.float32)  # TODO: why did we do float32
+    v = np.zeros((frame_count, frame_width, frame_height, 3), np.uint8)
 
     for count in range(frame_count):
         ret, frame = capture.read()
@@ -48,18 +51,22 @@ def loadvideo(filename: str) -> np.ndarray:
     return v
 
 
-def savevideo(filename: str, array: np.ndarray, fps: int = 1):
+def savevideo(filename: str, array: np.ndarray, fps: typing.Union[float, int] = 1):
     """Saves a video to a file.
 
     Args:
         filename (str): filename of video
-        array (np.ndarray): video of uint8's with dimensions (channels=3, frames, height, width)
+        array (np.ndarray): video of uint8's with shape (channels=3, frames, height, width)
+        fps (float or int): frames per second
 
     Returns:
         None
     """
 
     c, f, height, width = array.shape
+
+    if c != 3:
+        raise ValueError("savevideo expects array of shape (channels=3, frames, height, width), got shape ({})".format(", ".join(map(str, array.shape))))
     fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
     out = cv2.VideoWriter(filename, fourcc, fps, (width, height))
 

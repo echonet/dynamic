@@ -1,14 +1,15 @@
+import math
+import os
+import time
+
+import matplotlib.pyplot as plt
+import numpy as np
+import sklearn.metrics
 import torch
 import torchvision
-import time
 import tqdm
-import numpy as np
-import os
-import pathlib
+
 import echonet
-import sklearn.metrics
-import matplotlib.pyplot as plt
-import math
 
 
 def run(num_epochs=45,
@@ -35,7 +36,7 @@ def run(num_epochs=45,
         output = os.path.join("output", "video", "{}_{}_{}_{}".format(modelname, frames, period, "pretrained" if pretrained else "random"))
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    pathlib.Path(output).mkdir(parents=True, exist_ok=True)
+    os.makedirs(output, exist_ok=True)
 
     model = torchvision.models.video.__dict__[modelname](pretrained=pretrained)
 
@@ -126,7 +127,7 @@ def run(num_epochs=45,
         f.flush()
 
         if run_extra_tests:
-            ds = echonet.datasets.Echo(split="nsc", **kwargs, crops="all")
+            ds = echonet.datasets.Echo(split="nsc", **kwargs, clips="all")
             test_dataloader = torch.utils.data.DataLoader(
                 ds, batch_size=1, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
             loss, yhat, y = echonet.utils.video.run_epoch(model, test_dataloader, "test", None, device, save_all=True, blocks=100)
@@ -136,7 +137,7 @@ def run(num_epochs=45,
                     for (i, p) in enumerate(pred):
                         g.write("{},{},{:.4f}\n".format(filename, i, p))
 
-            ds = echonet.datasets.Echo(split="clinical_test", **kwargs, crops="all")
+            ds = echonet.datasets.Echo(split="clinical_test", **kwargs, clips="all")
             test_dataloader = torch.utils.data.DataLoader(
                 ds, batch_size=1, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
             loss, yhat, y = echonet.utils.video.run_epoch(model, test_dataloader, "test", None, device, save_all=True, blocks=100)
@@ -146,8 +147,8 @@ def run(num_epochs=45,
                     for (i, p) in enumerate(pred):
                         g.write("{},{},{:.4f}\n".format(filename, i, p))
 
-            ds = echonet.datasets.Echo(split="full", **kwargs, crops="all")
-            pathlib.Path(os.path.join(output, "full")).mkdir(parents=True, exist_ok=True)
+            ds = echonet.datasets.Echo(split="full", **kwargs, clips="all")
+            os.makedirs(os.path.join(output, "full"), exist_ok=True)
             for (block, start) in enumerate(range(0, len(ds), 1000)):
                 print("Block #{}".format(block), flush=True)
                 if not os.path.isfile(os.path.join(output, "full", "full_predictions_{}.csv".format(block))):
@@ -172,18 +173,18 @@ def run(num_epochs=45,
                     echonet.datasets.Echo(split=split, **kwargs),
                     batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
                 loss, yhat, y = echonet.utils.video.run_epoch(model, dataloader, split, None, device)
-                f.write("{} (one crop) R2:   {:.3f} ({:.3f} - {:.3f})\n".format(split, *echonet.utils.bootstrap(y, yhat, sklearn.metrics.r2_score)))
-                f.write("{} (one crop) MAE:  {:.2f} ({:.2f} - {:.2f})\n".format(split, *echonet.utils.bootstrap(y, yhat, sklearn.metrics.mean_absolute_error)))
-                f.write("{} (one crop) RMSE: {:.2f} ({:.2f} - {:.2f})\n".format(split, *tuple(map(math.sqrt, echonet.utils.bootstrap(y, yhat, sklearn.metrics.mean_squared_error)))))
+                f.write("{} (one clip) R2:   {:.3f} ({:.3f} - {:.3f})\n".format(split, *echonet.utils.bootstrap(y, yhat, sklearn.metrics.r2_score)))
+                f.write("{} (one clip) MAE:  {:.2f} ({:.2f} - {:.2f})\n".format(split, *echonet.utils.bootstrap(y, yhat, sklearn.metrics.mean_absolute_error)))
+                f.write("{} (one clip) RMSE: {:.2f} ({:.2f} - {:.2f})\n".format(split, *tuple(map(math.sqrt, echonet.utils.bootstrap(y, yhat, sklearn.metrics.mean_squared_error)))))
                 f.flush()
 
-                ds = echonet.datasets.Echo(split=split, **kwargs, crops="all")
+                ds = echonet.datasets.Echo(split=split, **kwargs, clips="all")
                 dataloader = torch.utils.data.DataLoader(
                     ds, batch_size=1, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
                 loss, yhat, y = echonet.utils.video.run_epoch(model, dataloader, split, None, device, save_all=True, blocks=100)
-                f.write("{} (all crops) R2:   {:.3f} ({:.3f} - {:.3f})\n".format(split, *echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.r2_score)))
-                f.write("{} (all crops) MAE:  {:.2f} ({:.2f} - {:.2f})\n".format(split, *echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.mean_absolute_error)))
-                f.write("{} (all crops) RMSE: {:.2f} ({:.2f} - {:.2f})\n".format(split, *tuple(map(math.sqrt, echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.mean_squared_error)))))
+                f.write("{} (all clips) R2:   {:.3f} ({:.3f} - {:.3f})\n".format(split, *echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.r2_score)))
+                f.write("{} (all clips) MAE:  {:.2f} ({:.2f} - {:.2f})\n".format(split, *echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.mean_absolute_error)))
+                f.write("{} (all clips) RMSE: {:.2f} ({:.2f} - {:.2f})\n".format(split, *tuple(map(math.sqrt, echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.mean_squared_error)))))
                 f.flush()
 
                 with open(os.path.join(output, "{}_predictions.csv".format(split)), "w") as g:
@@ -242,7 +243,7 @@ def run_epoch(model, dataloader, phase, optim, device, save_all=False, blocks=No
 
     with torch.set_grad_enabled(phase == 'train'):
         with tqdm.tqdm(total=len(dataloader)) as pbar:
-            for (i, (X, outcome)) in enumerate(dataloader):
+            for (X, outcome) in dataloader:
 
                 y.append(outcome.numpy())
                 X = X.to(device)
@@ -250,7 +251,7 @@ def run_epoch(model, dataloader, phase, optim, device, save_all=False, blocks=No
 
                 average = (len(X.shape) == 6)
                 if average:
-                    batch, n_crops, c, f, h, w = X.shape
+                    batch, n_clips, c, f, h, w = X.shape
                     X = X.view(-1, c, f, h, w)
 
                 summer += outcome.sum()
@@ -265,7 +266,7 @@ def run_epoch(model, dataloader, phase, optim, device, save_all=False, blocks=No
                     yhat.append(outputs.view(-1).to("cpu").detach().numpy())
 
                 if average:
-                    outputs = outputs.view(batch, n_crops, -1).mean(1)
+                    outputs = outputs.view(batch, n_clips, -1).mean(1)
 
                 if not save_all:
                     yhat.append(outputs.view(-1).to("cpu").detach().numpy())

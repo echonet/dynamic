@@ -1,14 +1,15 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import math
-import echonet
-import torch
 import os
-import torchvision
-import pathlib
-import tqdm
-import scipy.signal
 import time
+
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.signal
+import torch
+import torchvision
+import tqdm
+
+import echonet
 
 
 def run(num_epochs=50,
@@ -35,7 +36,7 @@ def run(num_epochs=50,
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    pathlib.Path(output).mkdir(parents=True, exist_ok=True)
+    os.makedirs(output, exist_ok=True)
 
     model = torchvision.models.segmentation.__dict__[modelname](pretrained=pretrained, aux_loss=False)
 
@@ -165,7 +166,7 @@ def run(num_epochs=50,
         # Save segmentations for all frames
         # Only run if missing files
 
-        pathlib.Path(os.path.join(output, "labels")).mkdir(parents=True, exist_ok=True)
+        os.makedirs(os.path.join(output, "labels"), exist_ok=True)
         block = 1024
         model.eval()
 
@@ -182,8 +183,8 @@ def run(num_epochs=50,
     dataloader = torch.utils.data.DataLoader(echonet.datasets.Echo(split="all", target_type=["Filename", "LargeIndex", "SmallIndex"], length=None, period=1, segmentation=os.path.join(output, "labels")),
                                              batch_size=1, num_workers=num_workers, shuffle=False, pin_memory=False)
     if save_segmentation and not all([os.path.isfile(os.path.join(output, "videos", f)) for f in dataloader.dataset.fnames]):
-        pathlib.Path(os.path.join(output, "videos")).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(os.path.join(output, "size")).mkdir(parents=True, exist_ok=True)
+        os.makedirs(os.path.join(output, "videos"), exist_ok=True)
+        os.makedirs(os.path.join(output, "size"), exist_ok=True)
         echonet.utils.latexify()
         with open(os.path.join(output, "size.csv"), "w") as g:
             g.write("Filename,Frame,Size,HumanLarge,HumanSmall,ComputerSmall\n")
@@ -259,7 +260,7 @@ def run_epoch(model, dataloader, phase, optim, device):
 
     with torch.set_grad_enabled(phase == 'train'):
         with tqdm.tqdm(total=len(dataloader)) as pbar:
-            for (i, (_, (large_frame, small_frame, large_trace, small_trace))) in enumerate(dataloader):
+            for (_, (large_frame, small_frame, large_trace, small_trace)) in dataloader:
                 pos += (large_trace == 1).sum().item()
                 pos += (small_trace == 1).sum().item()
                 neg += (large_trace == 0).sum().item()
