@@ -19,7 +19,7 @@ def main():
     os.makedirs(args.fig, exist_ok=True)
 
     fig = plt.figure(figsize=(7, 5))
-    gs = matplotlib.gridspec.GridSpec(ncols=3, nrows=2, figure=fig)
+    gs = matplotlib.gridspec.GridSpec(ncols=3, nrows=2, figure=fig, width_ratios=[2.75, 2.75, 1.50])
     ax0 = fig.add_subplot(gs[0, 0])
     ax1 = fig.add_subplot(gs[0, 1], sharey=ax0)
     for pretrained in [True]: # [True, False]:
