@@ -22,7 +22,8 @@ def run(num_epochs=50,
         batch_size=20,
         seed=0,
         lr_step_period=None,
-        save_segmentation=False):
+        save_segmentation=False,
+        block_size=1024):
 
     ### Seed RNGs ###
     np.random.seed(seed)
@@ -124,7 +125,8 @@ def run(num_epochs=50,
         model.load_state_dict(checkpoint['state_dict'])
         f.write("Best validation loss {} from epoch {}\n".format(checkpoint["loss"], checkpoint["epoch"]))
 
-        for split in ["val", "test"]:
+        # for split in ["val", "test"]:
+        for split in []:#["val", "test"]:
             dataset = echonet.datasets.Echo(split=split, **kwargs)
             dataloader = torch.utils.data.DataLoader(dataset,
                                                      batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
@@ -143,98 +145,89 @@ def run(num_epochs=50,
             f.write("{} dice (small):   {:.4f} ({:.4f} - {:.4f})\n".format(split, *echonet.utils.bootstrap(small_inter, small_union, echonet.utils.dice_similarity_coefficient)))
             f.flush()
 
-            echonet.utils.latexify()
-            fig = plt.figure(figsize=(4, 4))
-            plt.scatter(small_dice, large_dice, color="k", edgecolor=None, s=1)
-            plt.plot([0, 1], [0, 1], color="k", linewidth=1)
-            plt.axis([0, 1, 0, 1])
-            plt.xlabel("Systolic DSC")
-            plt.ylabel("Diastolic DSC")
-            plt.tight_layout()
-            plt.savefig(os.path.join(output, "{}_dice.pdf".format(split)))
-            plt.savefig(os.path.join(output, "{}_dice.png".format(split)))
-            plt.close(fig)
-
+    # Saving videos with segmentations
     def collate_fn(x):
+        """Collate function for Pytorch dataloader to merge multiple videos.
+        """
         x, f = zip(*x)
+        f = zip(*f)
         i = list(map(lambda t: t.shape[1], x))
         x = torch.as_tensor(np.swapaxes(np.concatenate(x, 1), 0, 1))
         return x, f, i
-    dataloader = torch.utils.data.DataLoader(echonet.datasets.Echo(split="all", target_type=["Filename"], length=None, period=1, mean=mean, std=std),
-                                             batch_size=10, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"), collate_fn=collate_fn)
-    if save_segmentation and not all([os.path.isfile(os.path.join(output, "labels", os.path.splitext(f)[0] + ".npy")) for f in dataloader.dataset.fnames]):
-        # Save segmentations for all frames
-        # Only run if missing files
 
-        os.makedirs(os.path.join(output, "labels"), exist_ok=True)
-        block = 1024
-        model.eval()
-
-        with torch.no_grad():
-            for (x, f, i) in tqdm.tqdm(dataloader):
-                x = x.to(device)
-                y = np.concatenate([model(x[i:(i + block), :, :, :])["out"].detach().cpu().numpy() for i in range(0, x.shape[0], block)]).astype(np.float16)
-                start = 0
-                for (filename, offset) in zip(f, i):
-                    np.save(os.path.join(output, "labels", os.path.splitext(filename)[0]), y[start:(start + offset), 0, :, :])
-                    start += offset
+    dataloader = torch.utils.data.DataLoader(echonet.datasets.Echo(split="all", target_type=["Filename", "LargeIndex", "SmallIndex"], mean=mean, std=std, length=None, max_length=None, period=1),
+                                             batch_size=10, num_workers=0, shuffle=False, pin_memory=False, collate_fn=collate_fn)
 
     # Save videos for all frames
-    dataloader = torch.utils.data.DataLoader(echonet.datasets.Echo(split="all", target_type=["Filename", "LargeIndex", "SmallIndex"], length=None, period=1, segmentation=os.path.join(output, "labels")),
-                                             batch_size=1, num_workers=num_workers, shuffle=False, pin_memory=False)
     if save_segmentation and not all([os.path.isfile(os.path.join(output, "videos", f)) for f in dataloader.dataset.fnames]):
+        # Only run if missing videos
+
+        model.eval()
+
         os.makedirs(os.path.join(output, "videos"), exist_ok=True)
         os.makedirs(os.path.join(output, "size"), exist_ok=True)
         echonet.utils.latexify()
-        with open(os.path.join(output, "size.csv"), "w") as g:
-            g.write("Filename,Frame,Size,HumanLarge,HumanSmall,ComputerSmall\n")
-            for (x, (filename, large_index, small_index)) in tqdm.tqdm(dataloader):
-                x = x.numpy()
-                for i in range(len(filename)):
-                    img = x[i, :, :, :, :].copy()
-                    logit = img[2, :, :, :].copy()
-                    img[1, :, :, :] = img[0, :, :, :]
-                    img[2, :, :, :] = img[0, :, :, :]
-                    img = np.concatenate((img, img), 3)
-                    img[0, :, :, 112:] = np.maximum(255. * (logit > 0), img[0, :, :, 112:])
 
-                    img = np.concatenate((img, np.zeros_like(img)), 2)
-                    size = (logit > 0).sum(2).sum(1)
-                    trim_min = sorted(size)[round(len(size) ** 0.05)]
-                    trim_max = sorted(size)[round(len(size) ** 0.95)]
-                    trim_range = trim_max - trim_min
-                    peaks = set(scipy.signal.find_peaks(-size, distance=20, prominence=(0.50 * trim_range))[0])
-                    for (x, y) in enumerate(size):
-                        g.write("{},{},{},{},{},{}\n".format(filename[0], x, y, 1 if x == large_index[i] else 0, 1 if x == small_index[i] else 0, 1 if x in peaks else 0))
-                    fig = plt.figure(figsize=(size.shape[0] / 50 * 1.5, 3))
-                    plt.scatter(np.arange(size.shape[0]) / 50, size, s=1)
-                    ylim = plt.ylim()
-                    for p in peaks:
-                        plt.plot(np.array([p, p]) / 50, ylim, linewidth=1)
-                    plt.ylim(ylim)
-                    plt.title(os.path.splitext(filename[i])[0])
-                    plt.xlabel("Seconds")
-                    plt.ylabel("Size (pixels)")
-                    plt.tight_layout()
-                    plt.savefig(os.path.join(output, "size", os.path.splitext(filename[i])[0] + ".pdf"))
-                    plt.close(fig)
-                    size -= size.min()
-                    size = size / size.max()
-                    size = 1 - size
-                    for (x, y) in enumerate(size):
-                        img[:, :, int(round(115 + 100 * y)), int(round(x / len(size) * 200 + 10))] = 255.
-                        interval = np.array([-3, -2, -1, 0, 1, 2, 3])
-                        for a in interval:
-                            for b in interval:
-                                img[:, x, a + int(round(115 + 100 * y)), b + int(round(x / len(size) * 200 + 10))] = 255.
+        with torch.no_grad():
+            with open(os.path.join(output, "size.csv"), "w") as g:
+                g.write("Filename,Frame,Size,HumanLarge,HumanSmall,ComputerSmall\n")
+                for (x, (filenames, large_index, small_index), length) in tqdm.tqdm(dataloader):
+                    y = np.concatenate([model(x[i:(i + block_size), :, :, :].to(device))["out"].detach().cpu().numpy() for i in range(0, x.shape[0], block_size)])
 
-                                if x == large_index[i]:
-                                    img[0, :, a + int(round(115 + 100 * y)), b + int(round(x / len(size) * 200 + 10))] = 255.
-                                if x == small_index[i]:
-                                    img[1, :, a + int(round(115 + 100 * y)), b + int(round(x / len(size) * 200 + 10))] = 255.
-                        if x in peaks:
-                            img[:, :, 200:225, b + int(round(x / len(size) * 200 + 10))] = 255.
-                    echonet.utils.savevideo(os.path.join(output, "videos", filename[i]), img.astype(np.uint8), 50)
+                    start = 0
+                    x = x.numpy()
+                    for (i, (filename, offset)) in enumerate(zip(filenames, length)):
+                        img = x[start:(start + offset), ...]
+                        img *= std.reshape(1, 3, 1, 1)
+                        img += mean.reshape(1, 3, 1, 1)
+                        logit = y[start:(start + offset), 0, :, :]
+
+                        start += offset
+
+                        f, c, h, w = img.shape
+                        assert c == 3
+                        img = np.concatenate((img, img), 3)
+                        img[:, 0, :, w:] = np.maximum(255. * (logit > 0), img[:, 0, :, w:])
+
+                        img = np.concatenate((img, np.zeros_like(img)), 2)
+                        size = (logit > 0).sum(2).sum(1)
+                        trim_min = sorted(size)[round(len(size) ** 0.05)]
+                        trim_max = sorted(size)[round(len(size) ** 0.95)]
+                        trim_range = trim_max - trim_min
+                        peaks = set(scipy.signal.find_peaks(-size, distance=20, prominence=(0.50 * trim_range))[0])
+                        for (frame, s) in enumerate(size):
+                            g.write("{},{},{},{},{},{}\n".format(f, frame, s, 1 if frame == large_index[i] else 0, 1 if frame == small_index[i] else 0, 1 if frame in peaks else 0))
+                        fig = plt.figure(figsize=(size.shape[0] / 50 * 1.5, 3))
+                        plt.scatter(np.arange(size.shape[0]) / 50, size, s=1)
+                        ylim = plt.ylim()
+                        for p in peaks:
+                            plt.plot(np.array([p, p]) / 50, ylim, linewidth=1)
+                        plt.ylim(ylim)
+                        plt.title(os.path.splitext(filename)[0])
+                        plt.xlabel("Seconds")
+                        plt.ylabel("Size (pixels)")
+                        plt.tight_layout()
+                        plt.savefig(os.path.join(output, "size", os.path.splitext(filename)[0] + ".pdf"))
+                        plt.close(fig)
+                        size -= size.min()
+                        size = size / size.max()
+                        size = 1 - size
+                        for (f, s) in enumerate(size):
+                            img[:, :, int(round(115 + 100 * s)), int(round(f / len(size) * 200 + 10))] = 255.
+                            interval = np.array([-3, -2, -1, 0, 1, 2, 3])
+                            for a in interval:
+                                for b in interval:
+                                    img[f, :, a + int(round(115 + 100 * s)), b + int(round(f / len(size) * 200 + 10))] = 255.
+
+                                    if f == large_index[i]:
+                                        img[:, 0, a + int(round(115 + 100 * s)), b + int(round(f / len(size) * 200 + 10))] = 255.
+                                    if f == small_index[i]:
+                                        img[:, 1, a + int(round(115 + 100 * s)), b + int(round(f / len(size) * 200 + 10))] = 255.
+                            if f in peaks:
+                                img[:, :, 200:225, b + int(round(f / len(size) * 200 + 10))] = 255.
+                        img = img.transpose(1, 0, 2, 3)
+                        img = img.astype(np.uint8)
+                        echonet.utils.savevideo(os.path.join(output, "videos", filename), img, 50)
 
 
 def run_epoch(model, dataloader, phase, optim, device):

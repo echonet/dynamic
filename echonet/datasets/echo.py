@@ -164,7 +164,7 @@ class Echo(torch.utils.data.Dataset):
         if isinstance(self.mean, (float, int)):
             video -= self.mean
         else:
-            video -= video - self.mean.reshape(3, 1, 1, 1)
+            video -= self.mean.reshape(3, 1, 1, 1)
 
         if isinstance(self.std, (float, int)):
             video /= self.std
