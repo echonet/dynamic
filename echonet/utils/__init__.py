@@ -153,9 +153,9 @@ def latexify():
     Based on https://nipunbatra.github.io/blog/2014/latexify.html
     """
     params = {'backend': 'pdf',
-              'axes.titlesize':  8,
-              'axes.labelsize':  8,
-              'font.size':       8,
+              'axes.titlesize': 8,
+              'axes.labelsize': 8,
+              'font.size': 8,
               'legend.fontsize': 8,
               'xtick.labelsize': 8,
               'ytick.labelsize': 8,

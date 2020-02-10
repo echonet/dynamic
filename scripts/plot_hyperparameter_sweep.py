@@ -15,7 +15,12 @@ os.makedirs(fig_root, exist_ok=True)
 
 def load(model, frames, period, pretrained):
     try:
-        with open(os.path.join(root, "{}_{}_{}_{}".format(model, frames, period, "pretrained" if pretrained else "random"), "log.csv"), "r") as f:
+        pretrained = ("pretrained" if pretrained else "random")
+        f = os.path.join(
+            root,
+            "{}_{}_{}_{}".format(model, frames, period, pretrained),
+            "log.csv")
+        with open(f, "r") as f:
             for l in f:
                 if "Best validation loss " in l:
                     return float(l.split()[3])
@@ -39,19 +44,22 @@ if __name__ == "__main__":
     outer = matplotlib.gridspec.GridSpec(1, 3, width_ratios=[3, 2.5, 1.50])
     ax = plt.subplot(outer[2])
     ax2 = plt.subplot(outer[1])
-    gs = matplotlib.gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=outer[0], width_ratios=[RATIO, 1], wspace=0.020)
+    gs = matplotlib.gridspec.GridSpecFromSubplotSpec(
+        1, 2, subplot_spec=outer[0], width_ratios=[RATIO, 1], wspace=0.020)
 
-    for (model, color) in zip(["EchoNet-Dynamic (EF)", "R3D", "MC3"], matplotlib.colors.TABLEAU_COLORS):
+    for (model, color) in zip(["EchoNet-Dynamic (EF)", "R3D", "MC3"],
+                              matplotlib.colors.TABLEAU_COLORS):
         ax.plot([float("nan")], [float("nan")], "-", color=color, label=model)
     ax.plot([float("nan")], [float("nan")], "-", color="k", label="Pretrained")
-    ax.plot([float("nan")], [float("nan")], "--", color="k", mfc="none", label="Random")
+    ax.plot([float("nan")], [float("nan")], "--", color="k", label="Random")
     ax.set_title("")
     ax.axis("off")
     ax.legend(loc="center")
 
     ax0 = plt.subplot(gs[0])
     ax1 = plt.subplot(gs[1], sharey=ax0)
-    for (model, color) in zip(["r2plus1d_18", "r3d_18", "mc3_18"], matplotlib.colors.TABLEAU_COLORS):
+    for (model, color) in zip(["r2plus1d_18", "r3d_18", "mc3_18"],
+                              matplotlib.colors.TABLEAU_COLORS):
         for pretrained in [True, False]:
             loss = [load(model, frames, 1, pretrained) for frames in FRAMES]
             print(model, pretrained)
@@ -59,8 +67,12 @@ if __name__ == "__main__":
 
             l0 = loss[-2]
             l1 = loss[-1]
-            ax0.plot(FRAMES[:-1] + [TERM0], loss[:-1] + [l0 + (l1 - l0) * (TERM0 - MAX) / (ALL - MAX)], "-" if pretrained else "--", color=color)
-            ax1.plot([TERM1, ALL], [l0 + (l1 - l0) * (TERM1 - MAX) / (ALL - MAX)] + [loss[-1]], "-" if pretrained else "--", color=color)
+            ax0.plot(FRAMES[:-1] + [TERM0],
+                     loss[:-1] + [l0 + (l1 - l0) * (TERM0 - MAX) / (ALL - MAX)],
+                     "-" if pretrained else "--", color=color)
+            ax1.plot([TERM1, ALL],
+                     [l0 + (l1 - l0) * (TERM1 - MAX) / (ALL - MAX)] + [loss[-1]],
+                     "-" if pretrained else "--", color=color)
             ax0.scatter(list(map(lambda x: x if x is not None else ALL, FRAMES)), loss, color=color, s=4)
             ax1.scatter(list(map(lambda x: x if x is not None else ALL, FRAMES)), loss, color=color, s=4)
 

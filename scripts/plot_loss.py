@@ -27,7 +27,7 @@ def main():
         for (model, color) in zip(["r2plus1d_18", "r3d_18", "mc3_18"], matplotlib.colors.TABLEAU_COLORS):
             loss = load(os.path.join(args.dir, "video", "{}_{}_{}_{}".format(model, args.frames, args.period, "pretrained" if pretrained else "random"), "log.csv"))
             ax0.plot(range(1, 1 + len(loss["train"])), loss["train"], "-" if pretrained else "--", color=color)
-            ax1.plot(range(1, 1 + len(loss["val"])),   loss["val"],   "-" if pretrained else "--", color=color)
+            ax1.plot(range(1, 1 + len(loss["val"])), loss["val"], "-" if pretrained else "--", color=color)
 
     plt.axis([0, max(len(loss["train"]), len(loss["val"])), 0, max(max(loss["train"]), max(loss["val"]))])
     ax0.text(-0.25, 1.00, "(a)", transform=ax0.transAxes)
@@ -45,7 +45,7 @@ def main():
     for (model, color) in zip(["deeplabv3_resnet50"], list(matplotlib.colors.TABLEAU_COLORS)[3:]):
         loss = load(os.path.join(args.dir, "segmentation", "{}_{}".format(model, "pretrained" if pretrained else "random"), "log.csv"))
         ax0.plot(range(1, 1 + len(loss["train"])), loss["train"], "--", color=color)
-        ax1.plot(range(1, 1 + len(loss["val"])),   loss["val"],   "--", color=color)
+        ax1.plot(range(1, 1 + len(loss["val"])), loss["val"], "--", color=color)
 
     ax0.text(-0.25, 1.00, "(c)", transform=ax0.transAxes)
     ax1.text(-0.25, 1.00, "(d)", transform=ax1.transAxes)
@@ -72,25 +72,23 @@ def main():
 
 
 def load(filename):
-    print(filename)
-    loss = {"train": [], "val": []}
-    print(filename)
+    losses = {"train": [], "val": []}
     with open(filename, "r") as f:
         for line in f:
             line = line.split(",")
             if len(line) < 4:
                 continue
-            epoch, split, l, *_ = line
+            epoch, split, loss, *_ = line
             epoch = int(epoch)
-            l = float(l)
+            loss = float(loss)
             assert(split in ["train", "val"])
-            if epoch == len(loss[split]):
-                loss[split].append(l)
-            elif epoch == len(loss[split]) - 1:
-                loss[split][-1] = l
+            if epoch == len(losses[split]):
+                losses[split].append(loss)
+            elif epoch == len(losses[split]) - 1:
+                losses[split][-1] = loss
             else:
                 raise ValueError()
-    return loss
+    return losses
 
 
 if __name__ == "__main__":

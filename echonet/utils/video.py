@@ -27,7 +27,7 @@ def run(num_epochs=45,
         lr_step_period=None,
         run_test=False):
 
-    ### Seed RNGs ###
+    # Seed RNGs
     np.random.seed(seed)
     torch.manual_seed(seed)
 
