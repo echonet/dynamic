@@ -18,47 +18,92 @@ def run(num_epochs=50,
         output=None,
         device=None,
         n_train_patients=None,
-        num_workers=5,
+        num_workers=4,
         batch_size=20,
         seed=0,
         lr_step_period=None,
         save_segmentation=False,
         block_size=1024):
+    """Trains/tests segmentation model.
 
-    ### Seed RNGs ###
+    Args:
+        num_epochs (int, optional): Number of epochs during training
+            Defaults to 50.
+        modelname (str, optional): Name of segmentation model. One of ``deeplabv3_resnet50'',
+            ``deeplabv3_resnet101'', ``fcn_resnet50'', or ``fcn_resnet101''
+            (options are torchvision.models.segmentation.<modelname>)
+            Defaults to "deeplabv3_resnet50".
+        pretrained (bool, optional): Whether to use pretrained weights for model
+            Defaults to False.
+        output (str or None, optional): Name of directory to place outputs
+            Defaults to None (replaced by output/segmentation/<modelname>_<pretrained/random>/).
+        device (str or None, optional): Name of device to run on. See
+            https://pytorch.org/docs/stable/tensor_attributes.html#torch.torch.device
+            for options. If ``None'', defaults to ``cuda'' if available, and ``cpu'' otherwise.
+            Defaults to ``None''.
+        n_train_patients (str or None, optional): Number of training patients. Used to ablations
+            on number of training patients. If ``None'', all patients used.
+            Defaults to ``None''.
+        num_workers (int, optional): how many subprocesses to use for data
+            loading. If 0, the data will be loaded in the main process.
+            Defaults to 4.
+        batch_size (int, optional): how many samples per batch to load
+            Defaults to 20.
+        seed (int, optional): Seed for random number generator.
+            Defaults to 0.
+        lr_step_period (int or None, optional): Period of learning rate decay
+            (learning rate is decayed by a multiplicative factor of 0.1)
+            If ``None'', learning rate is not decayed.
+            Defaults to ``None''.
+        save_segmentation (bool, optional): Whether to save videos with segmentations.
+            Defaults to False.
+        block_size (int, optional): Number of frames to segment simultaneously when saving
+            videos with segmentation (this is used to adjust the memory usage on GPU; decrease
+            this is GPU memory issues occur).
+            Defaults to 1024.
+    """
+
+    # Seed RNGs
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    tasks = ["LargeFrame", "SmallFrame", "LargeTrace", "SmallTrace"]
-
+    # Set default output directory
     if output is None:
         output = os.path.join("output", "segmentation", "{}_{}".format(modelname, "pretrained" if pretrained else "random"))
+    os.makedirs(output, exist_ok=True)
 
+    # Set device for computations
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    os.makedirs(output, exist_ok=True)
 
+    # Set up model
     model = torchvision.models.segmentation.__dict__[modelname](pretrained=pretrained, aux_loss=False)
 
-    model.classifier[-1] = torch.nn.Conv2d(model.classifier[-1].in_channels, 1, kernel_size=model.classifier[-1].kernel_size)
+    model.classifier[-1] = torch.nn.Conv2d(model.classifier[-1].in_channels, 1, kernel_size=model.classifier[-1].kernel_size)  # change number of outputs to 1
     if device.type == "cuda":
         model = torch.nn.DataParallel(model)
     model.to(device)
 
+    # Set up optimizer
     optim = torch.optim.SGD(model.parameters(), lr=1e-5, momentum=0.9)
     if lr_step_period is None:
         lr_step_period = math.inf
     scheduler = torch.optim.lr_scheduler.StepLR(optim, lr_step_period)
 
+    # Compute mean and std
     mean, std = echonet.utils.get_mean_and_std(echonet.datasets.Echo(split="train"))
+    tasks = ["LargeFrame", "SmallFrame", "LargeTrace", "SmallTrace"]
     kwargs = {"target_type": tasks,
               "mean": mean,
               "std": std
               }
 
+    # Set up datasets and dataloaders
     train_dataset = echonet.datasets.Echo(split="train", **kwargs)
+
     if n_train_patients is not None and len(train_dataset) > n_train_patients:
+        # Subsample patients (used for ablation experiment)
         indices = np.random.choice(len(train_dataset), n_train_patients, replace=False)
         train_dataset = torch.utils.data.Subset(train_dataset, indices)
 
@@ -68,7 +113,10 @@ def run(num_epochs=50,
         echonet.datasets.Echo(split="val", **kwargs), batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
     dataloaders = {'train': train_dataloader, 'val': val_dataloader}
 
+    # Run training and testing loops
     with open(os.path.join(output, "log.csv"), "a") as f:
+
+        # Attempt to load checkpoint
         epoch_resume = 0
         bestLoss = float("inf")
         try:
@@ -108,6 +156,7 @@ def run(num_epochs=50,
                 f.flush()
             scheduler.step()
 
+            # Save checkpoint
             save = {
                 'epoch': epoch,
                 'state_dict': model.state_dict(),
@@ -121,12 +170,13 @@ def run(num_epochs=50,
                 torch.save(save, os.path.join(output, "best.pt"))
                 bestLoss = loss
 
+        # Load best weights
         checkpoint = torch.load(os.path.join(output, "best.pt"))
         model.load_state_dict(checkpoint['state_dict'])
         f.write("Best validation loss {} from epoch {}\n".format(checkpoint["loss"], checkpoint["epoch"]))
 
-        # for split in ["val", "test"]:
-        for split in []:#["val", "test"]:
+        # Run on validation and test
+        for split in ["val", "test"]:
             dataset = echonet.datasets.Echo(split=split, **kwargs)
             dataloader = torch.utils.data.DataLoader(dataset,
                                                      batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))

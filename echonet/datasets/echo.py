@@ -12,22 +12,20 @@ import echonet
 
 class Echo(torch.utils.data.Dataset):
     """EchoNet-Dynamic Dataset.
-    (3, 16, 112, 112)
-
 
     Args:
         root (string): Root directory of dataset (defaults to `echonet.config.DATA_DIR`)
         split (string): One of {"train", "val", "test", "external_test"}
         target_type (string or list, optional): Type of target to use,
-            ``Filename'', ``EF``, ``EDV``, ``ESV``, ``LargeIndex'',
+            ``Filename'', ``EF'', ``EDV'', ``ESV'', ``LargeIndex'',
             ``SmallIndex'', ``LargeFrame'', ``SmallFrame'', ``LargeTrace'',
             or ``SmallTrace''
             Can also be a list to output a tuple with all specified target types.
             The targets represent:
                 ``Filename'' (string): filename of video
-                ``EF`` (float): ejection fraction
-                ``EDV`` (float): end-diastolic volume
-                ``ESV`` (float): end-systolic volume
+                ``EF'' (float): ejection fraction
+                ``EDV'' (float): end-diastolic volume
+                ``ESV'' (float): end-systolic volume
                 ``LargeIndex'' (int): index of large (diastolic) frame in video
                 ``SmallIndex'' (int): index of small (systolic) frame in video
                 ``LargeFrame'' (np.array shape=(3, height, width)): normalized large (diastolic) frame
@@ -38,7 +36,7 @@ class Echo(torch.utils.data.Dataset):
                 ``SmallTrace'' (np.array shape=(height, width)): left ventricle small (systolic) segmentation
                     value of 0 indicates pixel is outside left ventricle
                              1 indicates pixel is inside left ventricle
-            Defaults to ``EF``.
+            Defaults to ``EF''.
         mean (int, float, or np.array shape=(3,), optional): means for all (if scalar) or each (if np.array) channel.
             Used for normalizing the video. Defaults to 0 (video is not shifted).
         std (int, float, or np.array shape=(3,), optional): standard deviation for all (if scalar) or each (if np.array) channel.

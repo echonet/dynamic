@@ -15,8 +15,8 @@ import echonet
 def run(num_epochs=45,
         modelname="r3d_18",
         tasks="EF",
-        frames=16,
-        period=4,
+        frames=32,
+        period=2,
         pretrained=True,
         output=None,
         device=None,
@@ -25,8 +25,7 @@ def run(num_epochs=45,
         num_workers=5,
         batch_size=20,
         lr_step_period=None,
-        run_test=False,
-        run_extra_tests=False):
+        run_test=False):
 
     ### Seed RNGs ###
     np.random.seed(seed)
@@ -125,47 +124,6 @@ def run(num_epochs=45,
         model.load_state_dict(checkpoint['state_dict'])
         f.write("Best validation loss {} from epoch {}\n".format(checkpoint["loss"], checkpoint["epoch"]))
         f.flush()
-
-        if run_extra_tests:
-            ds = echonet.datasets.Echo(split="nsc", **kwargs, clips="all")
-            test_dataloader = torch.utils.data.DataLoader(
-                ds, batch_size=1, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
-            loss, yhat, y = echonet.utils.video.run_epoch(model, test_dataloader, "test", None, device, save_all=True, blocks=100)
-
-            with open(os.path.join(output, "nsc_predictions.csv"), "w") as g:
-                for (filename, pred) in zip(ds.fnames, yhat):
-                    for (i, p) in enumerate(pred):
-                        g.write("{},{},{:.4f}\n".format(filename, i, p))
-
-            ds = echonet.datasets.Echo(split="clinical_test", **kwargs, clips="all")
-            test_dataloader = torch.utils.data.DataLoader(
-                ds, batch_size=1, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
-            loss, yhat, y = echonet.utils.video.run_epoch(model, test_dataloader, "test", None, device, save_all=True, blocks=100)
-
-            with open(os.path.join(output, "clinical_test_predictions.csv"), "w") as g:
-                for (filename, pred) in zip(ds.fnames, yhat):
-                    for (i, p) in enumerate(pred):
-                        g.write("{},{},{:.4f}\n".format(filename, i, p))
-
-            ds = echonet.datasets.Echo(split="full", **kwargs, clips="all")
-            os.makedirs(os.path.join(output, "full"), exist_ok=True)
-            for (block, start) in enumerate(range(0, len(ds), 1000)):
-                print("Block #{}".format(block), flush=True)
-                if not os.path.isfile(os.path.join(output, "full", "full_predictions_{}.csv".format(block))):
-                    test_dataloader = torch.utils.data.DataLoader(
-                        torch.utils.data.Subset(ds, range(start, min(start + 1000, len(ds)))),
-                        batch_size=1, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
-                    loss, yhat, y = echonet.utils.video.run_epoch(model, test_dataloader, "test", None, device, save_all=True, blocks=100)
-
-                    with open(os.path.join(output, "full", "full_predictions_{}.csv".format(block)), "w") as g:
-                        for (filename, pred) in zip(ds.fnames, yhat):
-                            for (i, p) in enumerate(pred):
-                                g.write("{},{},{:.4f}\n".format(filename, i, p))
-            with open(os.path.join(output, "full_predictions.csv"), "w") as g:
-                for (block, start) in enumerate(range(0, len(ds), 1000)):
-                    with open(os.path.join(output, "full", "full_predictions_{}.csv".format(block)), "r") as h:
-                        for l in h:
-                            g.write(l)
 
         if run_test:
             for split in ["val", "test"]:

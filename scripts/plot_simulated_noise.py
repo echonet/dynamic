@@ -9,8 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sklearn
 import pickle
-import itertools
 import matplotlib
+
 
 def main():
     fig_root = os.path.join("figure", "noise")
@@ -24,43 +24,42 @@ def main():
     try:
         with open(filename, "rb") as f:
             Y, YHAT, INTER, UNION = pickle.load(f)
-        asd
-    except:
+    except FileNotFoundError:
         os.makedirs(fig_root, exist_ok=True)
 
-        # # Load trained video model
-        # model_v = torchvision.models.video.r2plus1d_18()
-        # model_v.fc = torch.nn.Linear(model_v.fc.in_features, 1)
-        # if device.type == "cuda":
-        #     model_v = torch.nn.DataParallel(model_v)
-        # model_v.to(device)
+        # Load trained video model
+        model_v = torchvision.models.video.r2plus1d_18()
+        model_v.fc = torch.nn.Linear(model_v.fc.in_features, 1)
+        if device.type == "cuda":
+            model_v = torch.nn.DataParallel(model_v)
+        model_v.to(device)
 
-        # checkpoint = torch.load(os.path.join(video_output, "checkpoint.pt"))
-        # model_v.load_state_dict(checkpoint['state_dict'])
+        checkpoint = torch.load(os.path.join(video_output, "checkpoint.pt"))
+        model_v.load_state_dict(checkpoint['state_dict'])
 
-        # # Load trained segmentation model
-        # model_s = torchvision.models.segmentation.deeplabv3_resnet50(aux_loss=False)
-        # model_s.classifier[-1] = torch.nn.Conv2d(model_s.classifier[-1].in_channels, 1, kernel_size=model_s.classifier[-1].kernel_size)
-        # if device.type == "cuda":
-        #     model_s = torch.nn.DataParallel(model_s)
-        # model_s.to(device)
+        # Load trained segmentation model
+        model_s = torchvision.models.segmentation.deeplabv3_resnet50(aux_loss=False)
+        model_s.classifier[-1] = torch.nn.Conv2d(model_s.classifier[-1].in_channels, 1, kernel_size=model_s.classifier[-1].kernel_size)
+        if device.type == "cuda":
+            model_s = torch.nn.DataParallel(model_s)
+        model_s.to(device)
 
-        # checkpoint = torch.load(os.path.join(seg_output, "checkpoint.pt"))
-        # model_s.load_state_dict(checkpoint['state_dict'])
+        checkpoint = torch.load(os.path.join(seg_output, "checkpoint.pt"))
+        model_s.load_state_dict(checkpoint['state_dict'])
 
-        # dice = []
-        # mse = []
-        # r2 = []
-        # Y = []
-        # YHAT = []
-        # INTER = []
-        # UNION = []
+        dice = []
+        mse = []
+        r2 = []
+        Y = []
+        YHAT = []
+        INTER = []
+        UNION = []
         for noise in NOISE:
-            # Y.append([])
-            # YHAT.append([])
-            # INTER.append([])
-            # UNION.append([])
-            
+            Y.append([])
+            YHAT.append([])
+            INTER.append([])
+            UNION.append([])
+
             dataset = echonet.datasets.Echo(split="test", noise=noise)
             PIL.Image.fromarray(dataset[0][0][:, 0, :, :].astype(np.uint8).transpose(1, 2, 0)).save(os.path.join(fig_root, "noise_{}.tif".format(round(100 * noise))))
             continue
@@ -68,15 +67,16 @@ def main():
             mean, std = echonet.utils.get_mean_and_std(echonet.datasets.Echo(split="train"))
 
             tasks = ["LargeFrame", "SmallFrame", "LargeTrace", "SmallTrace"]
-            kwargs = {"target_type": tasks,
-                      "mean": mean,
-                      "std": std,
-                      "noise": noise
-                     }
+            kwargs = {
+                "target_type": tasks,
+                "mean": mean,
+                "std": std,
+                "noise": noise
+            }
             dataset = echonet.datasets.Echo(split="test", **kwargs)
 
             dataloader = torch.utils.data.DataLoader(dataset,
-                                        batch_size=16, num_workers=5, shuffle=True, pin_memory=(device.type == "cuda"))
+                                                     batch_size=16, num_workers=5, shuffle=True, pin_memory=(device.type == "cuda"))
 
             loss, large_inter, large_union, small_inter, small_union = echonet.utils.segmentation.run_epoch(model_s, dataloader, "test", None, device)
             inter = np.concatenate((large_inter, small_inter)).sum()
@@ -97,7 +97,7 @@ def main():
             dataset = echonet.datasets.Echo(split="test", **kwargs)
 
             dataloader = torch.utils.data.DataLoader(dataset,
-                                        batch_size=16, num_workers=5, shuffle=True, pin_memory=(device.type == "cuda"))
+                                                     batch_size=16, num_workers=5, shuffle=True, pin_memory=(device.type == "cuda"))
             loss, yhat, y = echonet.utils.video.run_epoch(model_v, dataloader, "test", None, device)
             mse.append(loss)
             r2.append(sklearn.metrics.r2_score(y, yhat))
@@ -144,6 +144,7 @@ def main():
     plt.savefig(os.path.join(fig_root, "noise.eps"), dpi=300)
     plt.savefig(os.path.join(fig_root, "noise.png"), dpi=600)
     plt.close(fig)
+
 
 if __name__ == "__main__":
     main()

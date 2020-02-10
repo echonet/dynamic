@@ -91,7 +91,7 @@ def get_mean_and_std(dataset: torch.utils.data.Dataset,
             Defaults to 8.
         num_workers (int, optional): how many subprocesses to use for data
             loading. If 0, the data will be loaded in the main process.
-            Defaults to 0.
+            Defaults to 4.
 
     Returns:
        A tuple of the mean and standard deviation. Both are represented as np.array's of dimension (channels,).

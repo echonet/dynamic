@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 import echonet
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("dir", nargs="?", default="output")
@@ -22,7 +23,7 @@ def main():
     gs = matplotlib.gridspec.GridSpec(ncols=3, nrows=2, figure=fig, width_ratios=[2.75, 2.75, 1.50])
     ax0 = fig.add_subplot(gs[0, 0])
     ax1 = fig.add_subplot(gs[0, 1], sharey=ax0)
-    for pretrained in [True]: # [True, False]:
+    for pretrained in [True]:
         for (model, color) in zip(["r2plus1d_18", "r3d_18", "mc3_18"], matplotlib.colors.TABLEAU_COLORS):
             loss = load(os.path.join(args.dir, "video", "{}_{}_{}_{}".format(model, args.frames, args.period, "pretrained" if pretrained else "random"), "log.csv"))
             ax0.plot(range(1, 1 + len(loss["train"])), loss["train"], "-" if pretrained else "--", color=color)
@@ -90,6 +91,7 @@ def load(filename):
             else:
                 raise ValueError()
     return loss
+
 
 if __name__ == "__main__":
     main()
