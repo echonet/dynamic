@@ -64,5 +64,5 @@ install:
 
 script:
   - flake8 --ignore=E501
-  - pylint --disable=C0103,C0301 --extension-pkg-whitelist=cv2,torch echonet/
+  - pylint --disable=C0103,C0301 --extension-pkg-whitelist=cv2,torch echonet/ scripts/*.py setup.py
   - python -c "import echonet"
