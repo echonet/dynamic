@@ -64,7 +64,6 @@ def run(num_epochs=45,
             Defaults to False.
     """
 
-
     # Seed RNGs
     np.random.seed(seed)
     torch.manual_seed(seed)
