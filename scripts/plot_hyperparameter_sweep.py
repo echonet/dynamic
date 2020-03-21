@@ -1,52 +1,44 @@
 #!/usr/bin/env python3
 
-import matplotlib
-import matplotlib.pyplot as plt
-import echonet
+"""Code to generate plots for Extended Data Fig. 1."""
+
 import os
 
-root = os.path.join("output", "video")
-fig_root = os.path.join("figure", "hyperparameter")
+import matplotlib
+import matplotlib.pyplot as plt
 
-echonet.utils.latexify()
-
-os.makedirs(fig_root, exist_ok=True)
+import echonet
 
 
-def load(model, frames, period, pretrained):
-    try:
-        pretrained = ("pretrained" if pretrained else "random")
-        f = os.path.join(
-            root,
-            "{}_{}_{}_{}".format(model, frames, period, pretrained),
-            "log.csv")
-        with open(f, "r") as f:
-            for l in f:
-                if "Best validation loss " in l:
-                    return float(l.split()[3])
-    except FileNotFoundError:
-        pass
+def main(root=os.path.join("output", "video"),
+         fig_root=os.path.join("figure", "hyperparameter"),
+         FRAMES=(1, 8, 16, 32, 64, 96, None),
+         PERIOD=(1, 2, 4, 6, 8)
+         ):
+    """Generate plots for Extended Data Fig. 1."""
 
+    echonet.utils.latexify()
+    os.makedirs(fig_root, exist_ok=True)
 
-if __name__ == "__main__":
-    print("FRAMES")
-    FRAMES = [1, 8, 16, 32, 64, 96, None]
+    # Parameters for plotting length sweep
     MAX = FRAMES[-2]
-    START = 1
-    TERM0 = 104
-    BREAK = 112
-    TERM1 = 120
-    ALL = 128
-    END = 135
+    START = 1    # Starting point for normal range
+    TERM0 = 104  # Ending point for normal range
+    BREAK = 112  # Location for break
+    TERM1 = 120  # Starting point for "all" section
+    ALL = 128    # Location of "all" point
+    END = 135    # Ending point for "all" section
     RATIO = (BREAK - START) / (END - BREAK)
 
+    # Set up figure
     fig = plt.figure(figsize=(3 + 2.5 + 1.5, 2.75))
     outer = matplotlib.gridspec.GridSpec(1, 3, width_ratios=[3, 2.5, 1.50])
-    ax = plt.subplot(outer[2])
-    ax2 = plt.subplot(outer[1])
+    ax = plt.subplot(outer[2])   # Legend
+    ax2 = plt.subplot(outer[1])  # Period plot
     gs = matplotlib.gridspec.GridSpecFromSubplotSpec(
-        1, 2, subplot_spec=outer[0], width_ratios=[RATIO, 1], wspace=0.020)
+        1, 2, subplot_spec=outer[0], width_ratios=[RATIO, 1], wspace=0.020)  # Length plot
 
+    # Plot legend
     for (model, color) in zip(["EchoNet-Dynamic (EF)", "R3D", "MC3"],
                               matplotlib.colors.TABLEAU_COLORS):
         ax.plot([float("nan")], [float("nan")], "-", color=color, label=model)
@@ -56,18 +48,20 @@ if __name__ == "__main__":
     ax.axis("off")
     ax.legend(loc="center")
 
+    # Plot length sweep (panel a)
     ax0 = plt.subplot(gs[0])
     ax1 = plt.subplot(gs[1], sharey=ax0)
+    print("FRAMES")
     for (model, color) in zip(["r2plus1d_18", "r3d_18", "mc3_18"],
                               matplotlib.colors.TABLEAU_COLORS):
         for pretrained in [True, False]:
-            loss = [load(model, frames, 1, pretrained) for frames in FRAMES]
+            loss = [load(root, model, frames, 1, pretrained) for frames in FRAMES]
             print(model, pretrained)
-            print(list(map(lambda x: "{:.1f}".format(x) if x is not None else None, loss)))
+            print("    ".join(list(map(lambda x: "{:.1f}".format(x) if x is not None else None, loss))))
 
             l0 = loss[-2]
             l1 = loss[-1]
-            ax0.plot(FRAMES[:-1] + [TERM0],
+            ax0.plot(FRAMES[:-1] + (TERM0,),
                      loss[:-1] + [l0 + (l1 - l0) * (TERM0 - MAX) / (ALL - MAX)],
                      "-" if pretrained else "--", color=color)
             ax1.plot([TERM1, ALL],
@@ -114,22 +108,42 @@ if __name__ == "__main__":
     ax0.set_xlabel("Clip length (frames)")
     ax0.set_ylabel("Validation Loss")
 
+    # Plot period sweep (panel b)
     print("PERIOD")
-    PERIOD = [1, 2, 4, 6, 8]
-
     for (model, color) in zip(["r2plus1d_18", "r3d_18", "mc3_18"], matplotlib.colors.TABLEAU_COLORS):
         for pretrained in [True, False]:
-            loss = [load(model, 64 // period, period, pretrained) for period in PERIOD]
+            loss = [load(root, model, 64 // period, period, pretrained) for period in PERIOD]
             print(model, pretrained)
-            print(list(map(lambda x: "{:.1f}".format(x) if x is not None else None, loss)))
+            print("    ".join(list(map(lambda x: "{:.1f}".format(x) if x is not None else None, loss))))
 
             ax2.plot(PERIOD, loss, "-" if pretrained else "--", marker=".", color=color)
     ax2.set_xticks(PERIOD)
     ax2.text(-0.05, 1.10, "(b)", transform=ax2.transAxes)
     ax2.set_xlabel("Sampling Period (frames)")
     ax2.set_ylabel("Validation Loss")
+
+    # Save figure
     plt.tight_layout()
     plt.savefig(os.path.join(fig_root, "hyperparameter.pdf"))
     plt.savefig(os.path.join(fig_root, "hyperparameter.eps"))
     plt.savefig(os.path.join(fig_root, "hyperparameter.png"))
     plt.close(fig)
+
+
+def load(root, model, frames, period, pretrained):
+    """Loads best validation loss for specified hyperparameter choice."""
+    pretrained = ("pretrained" if pretrained else "random")
+    f = os.path.join(
+        root,
+        "{}_{}_{}_{}".format(model, frames, period, pretrained),
+        "log.csv")
+    with open(f, "r") as f:
+        for l in f:
+            if "Best validation loss " in l:
+                return float(l.split()[3])
+
+    raise ValueError("File missing information.")
+
+
+if __name__ == "__main__":
+    main()

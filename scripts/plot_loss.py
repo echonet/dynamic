@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Code to generate plots for Extended Data Fig. 3."""
+
 import argparse
 import os
 import matplotlib
@@ -9,6 +11,9 @@ import echonet
 
 
 def main():
+    """Generate plots for Extended Data Fig. 3."""
+
+    # Select paths and hyperparameter to plot
     parser = argparse.ArgumentParser()
     parser.add_argument("dir", nargs="?", default="output")
     parser.add_argument("fig", nargs="?", default=os.path.join("figure", "loss"))
@@ -16,11 +21,13 @@ def main():
     parser.add_argument("--period", type=int, default=2)
     args = parser.parse_args()
 
+    # Set up figure
     echonet.utils.latexify()
     os.makedirs(args.fig, exist_ok=True)
-
     fig = plt.figure(figsize=(7, 5))
     gs = matplotlib.gridspec.GridSpec(ncols=3, nrows=2, figure=fig, width_ratios=[2.75, 2.75, 1.50])
+
+    # Plot EF loss curve
     ax0 = fig.add_subplot(gs[0, 0])
     ax1 = fig.add_subplot(gs[0, 1], sharey=ax0)
     for pretrained in [True]:
@@ -39,6 +46,7 @@ def main():
     ax0.set_ylabel("Training MSE Loss")
     ax1.set_ylabel("Validation MSE Loss")
 
+    # Plot segmentation loss curve
     ax0 = fig.add_subplot(gs[1, 0])
     ax1 = fig.add_subplot(gs[1, 1], sharey=ax0)
     pretrained = False
@@ -57,6 +65,7 @@ def main():
     ax0.set_ylabel("Training Cross Entropy Loss")
     ax1.set_ylabel("Validation Cross Entropy Loss")
 
+    # Legend
     ax = fig.add_subplot(gs[:, 2])
     for (model, color) in zip(["EchoNet-Dynamic (EF)", "R3D", "MC3", "EchoNet-Dynamic (Seg)"], matplotlib.colors.TABLEAU_COLORS):
         ax.plot([float("nan")], [float("nan")], "-", color=color, label=model)
@@ -72,6 +81,8 @@ def main():
 
 
 def load(filename):
+    """Loads losses from specified file."""
+
     losses = {"train": [], "val": []}
     with open(filename, "r") as f:
         for line in f:
@@ -87,7 +98,7 @@ def load(filename):
             elif epoch == len(losses[split]) - 1:
                 losses[split][-1] = loss
             else:
-                raise ValueError()
+                raise ValueError("File has uninterpretable formatting.")
     return losses
 
 

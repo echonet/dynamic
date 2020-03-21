@@ -1,30 +1,36 @@
 #!/usr/bin/env python3
 
-import PIL
+"""Code to generate plots for Extended Data Fig. 6."""
+
 import os
+import pickle
+
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+import PIL
+import sklearn
 import torch
 import torchvision
+
 import echonet
-import numpy as np
-import matplotlib.pyplot as plt
-import sklearn
-import pickle
-import matplotlib
 
 
-def main():
-    fig_root = os.path.join("figure", "noise")
-    video_output = os.path.join("output", "video", "r2plus1d_18_32_2_pretrained")
-    seg_output = os.path.join("output", "segmentation", "deeplabv3_resnet50_random")
+def main(fig_root=os.path.join("figure", "noise"),
+         video_output=os.path.join("output", "video", "r2plus1d_18_32_2_pretrained"),
+         seg_output=os.path.join("output", "segmentation", "deeplabv3_resnet50_random"),
+         NOISE=(0, 0.1, 0.2, 0.3, 0.4, 0.5)):
+    """Generate plots for Extended Data Fig. 6."""
 
     device = torch.device("cuda")
 
-    NOISE = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
-    filename = os.path.join(fig_root, "data.pkl")
+    filename = os.path.join(fig_root, "data.pkl")  # Cache of results
     try:
+        # Attempt to load cache
         with open(filename, "rb") as f:
             Y, YHAT, INTER, UNION = pickle.load(f)
     except FileNotFoundError:
+        # Generate results if no cache available
         os.makedirs(fig_root, exist_ok=True)
 
         # Load trained video model
@@ -47,6 +53,7 @@ def main():
         checkpoint = torch.load(os.path.join(seg_output, "checkpoint.pt"))
         model_s.load_state_dict(checkpoint['state_dict'])
 
+        # Run simulation
         dice = []
         mse = []
         r2 = []
@@ -62,7 +69,6 @@ def main():
 
             dataset = echonet.datasets.Echo(split="test", noise=noise)
             PIL.Image.fromarray(dataset[0][0][:, 0, :, :].astype(np.uint8).transpose(1, 2, 0)).save(os.path.join(fig_root, "noise_{}.tif".format(round(100 * noise))))
-            continue
 
             mean, std = echonet.utils.get_mean_and_std(echonet.datasets.Echo(split="train"))
 
@@ -104,9 +110,11 @@ def main():
             Y[-1].extend(y.tolist())
             YHAT[-1].extend(yhat.tolist())
 
-        # with open(filename, "wb") as f:
-        #     pickle.dump((Y, YHAT, INTER, UNION), f)
+        # Save results in cache
+        with open(filename, "wb") as f:
+            pickle.dump((Y, YHAT, INTER, UNION), f)
 
+    # Set up plot
     echonet.utils.latexify()
 
     NOISE = list(map(lambda x: round(100 * x), NOISE))
@@ -114,6 +122,7 @@ def main():
     gs = matplotlib.gridspec.GridSpec(3, 1, height_ratios=[2.0, 2.0, 0.75])
     ax = (plt.subplot(gs[0]), plt.subplot(gs[1]), plt.subplot(gs[2]))
 
+    # Plot EF prediction results (R^2)
     r2 = [sklearn.metrics.r2_score(y, yhat) for (y, yhat) in zip(Y, YHAT)]
     ax[0].plot(NOISE, r2, color="k", linewidth=1, marker=".")
     ax[0].set_xticks([])
@@ -122,6 +131,7 @@ def main():
     l, h = l - 0.1 * (h - l), h + 0.1 * (h - l)
     ax[0].axis([min(NOISE) - 5, max(NOISE) + 5, 0, 1])
 
+    # Plot segmentation results (DSC)
     dice = [echonet.utils.dice_similarity_coefficient(inter, union) for (inter, union) in zip(INTER, UNION)]
     ax[1].plot(NOISE, dice, color="k", linewidth=1, marker=".")
     ax[1].set_xlabel("Pixels Removed (%)")
@@ -130,6 +140,7 @@ def main():
     l, h = l - 0.1 * (h - l), h + 0.1 * (h - l)
     ax[1].axis([min(NOISE) - 5, max(NOISE) + 5, 0, 1])
 
+    # Add example images below
     for noise in NOISE:
         image = matplotlib.image.imread(os.path.join(fig_root, "noise_{}.tif".format(noise)))
         imagebox = matplotlib.offsetbox.OffsetImage(image, zoom=0.4)
@@ -139,7 +150,6 @@ def main():
     ax[2].axis([min(NOISE) - 5, max(NOISE) + 5, -1, 1])
 
     fig.tight_layout()
-    # fig.subplots_adjust(hspace=0.1)
     plt.savefig(os.path.join(fig_root, "noise.pdf"), dpi=1200)
     plt.savefig(os.path.join(fig_root, "noise.eps"), dpi=300)
     plt.savefig(os.path.join(fig_root, "noise.png"), dpi=600)
