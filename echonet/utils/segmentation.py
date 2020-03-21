@@ -202,15 +202,52 @@ def run(num_epochs=50,
     # Saving videos with segmentations
     def collate_fn(x):
         """Collate function for Pytorch dataloader to merge multiple videos.
-        """
-        x, f = zip(*x)
-        f = zip(*f)
-        i = list(map(lambda t: t.shape[1], x))
-        x = torch.as_tensor(np.swapaxes(np.concatenate(x, 1), 0, 1))
-        return x, f, i
 
-    dataloader = torch.utils.data.DataLoader(echonet.datasets.Echo(split="all", target_type=["Filename", "LargeIndex", "SmallIndex"], mean=mean, std=std, length=None, max_length=None, period=1),
-                                             batch_size=10, num_workers=0, shuffle=False, pin_memory=False, collate_fn=collate_fn)
+        This function should be used in a dataloader for a dataset that returns
+        a video as the first element, along with some (non-zero) tuple of
+        targets. Then, the input x is a list of tuples:
+          - x[i][0] is the i-th video in the batch
+          - x[i][1] are the targets for the i-th video
+
+        This function returns a 3-tuple:
+          - The first element is the videos concatenated along the frames
+            dimension. This is done so that videos of different lengths can be
+            processed together (tensors cannot be "jagged", so we cannot have
+            a dimension for video, and another for frames).
+          - The second element is contains the targets with no modification.
+          - The third element is a list of the lengths of the videos in frames.
+        """
+        video, target = zip(*x)  # Extract the videos and targets
+
+        # ``video'' is a tuple of length ``batch_size''
+        #   Each element has shape (channels=3, frames, height, width)
+        #   height and width are expected to be the same across videos, but
+        #   frames can be different.
+
+        # ``target'' is also a tuple of length ``batch_size''
+        # Each element is a tuple of the targets for the item.
+
+        i = list(map(lambda t: t.shape[1], video))  # Extract lengths of videos in frames
+
+        # This contatenates the videos along the the frames dimension (basically
+        # playing the videos one after another). The frames dimension is then
+        # moved to be first.
+        # Resulting shape is (total frames, channels=3, height, width)
+        video = torch.as_tensor(np.swapaxes(np.concatenate(video, 1), 0, 1))
+
+        # Swap dimensions (approximately a transpose)
+        # Before: target[i][j] is the j-th target of element i
+        # After:  target[i][j] is the i-th target of element j
+        target = zip(*target)
+
+        return video, target, i
+
+    dataset = echonet.datasets.Echo(split="all",
+                                    target_type=["Filename", "LargeIndex", "SmallIndex"],  # Need filename for saving, and human-selected frames to annotate
+                                    mean=mean, std=std,  # Normalization
+                                    length=None, max_length=None, period=1  # Take all frames
+                                    )
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=10, num_workers=0, shuffle=False, pin_memory=False, collate_fn=collate_fn)
 
     # Save videos for all frames
     if save_segmentation and not all([os.path.isfile(os.path.join(output, "videos", f)) for f in dataloader.dataset.fnames]):
@@ -226,36 +263,54 @@ def run(num_epochs=50,
             with open(os.path.join(output, "size.csv"), "w") as g:
                 g.write("Filename,Frame,Size,HumanLarge,HumanSmall,ComputerSmall\n")
                 for (x, (filenames, large_index, small_index), length) in tqdm.tqdm(dataloader):
+                    # Run segmentation model on blocks of frames one-by-one
+                    # The whole concatenated video may be too long to run together
                     y = np.concatenate([model(x[i:(i + block_size), :, :, :].to(device))["out"].detach().cpu().numpy() for i in range(0, x.shape[0], block_size)])
 
                     start = 0
                     x = x.numpy()
                     for (i, (filename, offset)) in enumerate(zip(filenames, length)):
-                        img = x[start:(start + offset), ...]
-                        img *= std.reshape(1, 3, 1, 1)
-                        img += mean.reshape(1, 3, 1, 1)
+                        # Extract one video and segmentation predictions
+                        video = x[start:(start + offset), ...]
                         logit = y[start:(start + offset), 0, :, :]
 
-                        start += offset
+                        # Un-normalize video
+                        video *= std.reshape(1, 3, 1, 1)
+                        video += mean.reshape(1, 3, 1, 1)
 
-                        f, c, h, w = img.shape
+                        # Get frames, channels, height, and width
+                        f, c, h, w = video.shape
                         assert c == 3
-                        img = np.concatenate((img, img), 3)
-                        img[:, 0, :, w:] = np.maximum(255. * (logit > 0), img[:, 0, :, w:])
 
-                        img = np.concatenate((img, np.zeros_like(img)), 2)
-                        size = (logit > 0).sum(2).sum(1)
+                        # Put two copies of the video side by side
+                        video = np.concatenate((video, video), 3)
+
+                        # If a pixel is in the segmentation, saturate blue channel
+                        # Leave alone otherwise
+                        video[:, 0, :, w:] = np.maximum(255. * (logit > 0), video[:, 0, :, w:])
+
+                        # Add blank canvas under pair of videos
+                        video = np.concatenate((video, np.zeros_like(video)), 2)
+
+                        # Compute size of segmentation per frame
+                        size = (logit > 0).sum((1, 2))
+
+                        # Identify systole frames with peak detection
                         trim_min = sorted(size)[round(len(size) ** 0.05)]
                         trim_max = sorted(size)[round(len(size) ** 0.95)]
                         trim_range = trim_max - trim_min
-                        peaks = set(scipy.signal.find_peaks(-size, distance=20, prominence=(0.50 * trim_range))[0])
+                        systole = set(scipy.signal.find_peaks(-size, distance=20, prominence=(0.50 * trim_range))[0])
+
+                        # Write sizes and frames to file
                         for (frame, s) in enumerate(size):
-                            g.write("{},{},{},{},{},{}\n".format(f, frame, s, 1 if frame == large_index[i] else 0, 1 if frame == small_index[i] else 0, 1 if frame in peaks else 0))
+                            g.write("{},{},{},{},{},{}\n".format(f, frame, s, 1 if frame == large_index[i] else 0, 1 if frame == small_index[i] else 0, 1 if frame in systole else 0))
+
+                        # Plot sizes
                         fig = plt.figure(figsize=(size.shape[0] / 50 * 1.5, 3))
                         plt.scatter(np.arange(size.shape[0]) / 50, size, s=1)
                         ylim = plt.ylim()
-                        for p in peaks:
-                            plt.plot(np.array([p, p]) / 50, ylim, linewidth=1)
+                        for s in systole:
+                            plt.plot(np.array([s, s]) / 50, ylim, linewidth=1)
                         plt.ylim(ylim)
                         plt.title(os.path.splitext(filename)[0])
                         plt.xlabel("Seconds")
@@ -263,24 +318,42 @@ def run(num_epochs=50,
                         plt.tight_layout()
                         plt.savefig(os.path.join(output, "size", os.path.splitext(filename)[0] + ".pdf"))
                         plt.close(fig)
+
+                        # Normalize size to [0, 1]
                         size -= size.min()
                         size = size / size.max()
                         size = 1 - size
+
+                        # Iterate the frames in this video
                         for (f, s) in enumerate(size):
-                            img[:, :, int(round(115 + 100 * s)), int(round(f / len(size) * 200 + 10))] = 255.
 
+                            # On all frames, mark a pixel for the size of the frame
+                            video[:, :, int(round(115 + 100 * s)), int(round(f / len(size) * 200 + 10))] = 255.
+
+                            if f in systole:
+                                # If frame is computer-selected systole, mark with a line
+                                video[:, :, 200:225, int(round(f / len(size) * 200 + 10))] = 255.
+
+                            # Get pixels for a circle centered on the pixel
                             r, c = skimage.draw.circle(int(round(115 + 100 * s)), int(round(f / len(size) * 200 + 10)), 3.1)
-                            img[f, :, r, c] = 255.
-                            if f == large_index[i]:
-                                img[:, 0, r, c] = 255.
-                            if f == small_index[i]:
-                                img[:, 1, r, c] = 255.
 
-                            if f in peaks:
-                                img[:, :, 200:225, int(round(f / len(size) * 200 + 10))] = 255.
-                        img = img.transpose(1, 0, 2, 3)
-                        img = img.astype(np.uint8)
-                        echonet.utils.savevideo(os.path.join(output, "videos", filename), img, 50)
+                            # On the frame that's being shown, put a circle over the pixel
+                            video[f, :, r, c] = 255.
+
+                            if f == large_index[i]:
+                                # If frame is human-selected diastole, mark with blue circle on all frames
+                                video[:, 0, r, c] = 255.
+                            if f == small_index[i]:
+                                # If frame is human-selected systole, mark with green circle on all frames
+                                video[:, 1, r, c] = 255.
+
+                        # Rearrange dimensions and save
+                        video = video.transpose(1, 0, 2, 3)
+                        video = video.astype(np.uint8)
+                        echonet.utils.savevideo(os.path.join(output, "videos", filename), video, 50)
+
+                        # Move to next video
+                        start += offset
 
 
 def run_epoch(model, dataloader, phase, optim, device):
