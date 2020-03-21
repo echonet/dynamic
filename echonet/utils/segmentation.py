@@ -24,7 +24,8 @@ def run(num_epochs=50,
         seed=0,
         lr_step_period=None,
         save_segmentation=False,
-        block_size=1024):
+        block_size=1024,
+        run_test=False):
     """Trains/tests segmentation model.
 
     Args:
@@ -33,7 +34,7 @@ def run(num_epochs=50,
         modelname (str, optional): Name of segmentation model. One of ``deeplabv3_resnet50'',
             ``deeplabv3_resnet101'', ``fcn_resnet50'', or ``fcn_resnet101''
             (options are torchvision.models.segmentation.<modelname>)
-            Defaults to "deeplabv3_resnet50".
+            Defaults to ``deeplabv3_resnet50''.
         pretrained (bool, optional): Whether to use pretrained weights for model
             Defaults to False.
         output (str or None, optional): Name of directory to place outputs
@@ -62,6 +63,8 @@ def run(num_epochs=50,
             videos with segmentation (this is used to adjust the memory usage on GPU; decrease
             this is GPU memory issues occur).
             Defaults to 1024.
+        run_test (bool, optional): Whether or not to run on test.
+            Defaults to False.
     """
 
     # Seed RNGs
@@ -116,11 +119,10 @@ def run(num_epochs=50,
 
     # Run training and testing loops
     with open(os.path.join(output, "log.csv"), "a") as f:
-
-        # Attempt to load checkpoint
         epoch_resume = 0
         bestLoss = float("inf")
         try:
+            # Attempt to load checkpoint
             checkpoint = torch.load(os.path.join(output, "checkpoint.pt"))
             model.load_state_dict(checkpoint['state_dict'])
             optim.load_state_dict(checkpoint['opt_dict'])
@@ -176,25 +178,26 @@ def run(num_epochs=50,
         model.load_state_dict(checkpoint['state_dict'])
         f.write("Best validation loss {} from epoch {}\n".format(checkpoint["loss"], checkpoint["epoch"]))
 
-        # Run on validation and test
-        for split in ["val", "test"]:
-            dataset = echonet.datasets.Echo(split=split, **kwargs)
-            dataloader = torch.utils.data.DataLoader(dataset,
-                                                     batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
-            loss, large_inter, large_union, small_inter, small_union = echonet.utils.segmentation.run_epoch(model, dataloader, split, None, device)
+        if run_test:
+            # Run on validation and test
+            for split in ["val", "test"]:
+                dataset = echonet.datasets.Echo(split=split, **kwargs)
+                dataloader = torch.utils.data.DataLoader(dataset,
+                                                         batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
+                loss, large_inter, large_union, small_inter, small_union = echonet.utils.segmentation.run_epoch(model, dataloader, split, None, device)
 
-            overall_dice = 2 * (large_inter + small_inter) / (large_union + large_inter + small_union + small_inter)
-            large_dice = 2 * large_inter / (large_union + large_inter)
-            small_dice = 2 * small_inter / (small_union + small_inter)
-            with open(os.path.join(output, "{}_dice.csv".format(split)), "w") as g:
-                g.write("Filename, Overall, Large, Small\n")
-                for (filename, overall, large, small) in zip(dataset.fnames, overall_dice, large_dice, small_dice):
-                    g.write("{},{},{},{}\n".format(filename, overall, large, small))
+                overall_dice = 2 * (large_inter + small_inter) / (large_union + large_inter + small_union + small_inter)
+                large_dice = 2 * large_inter / (large_union + large_inter)
+                small_dice = 2 * small_inter / (small_union + small_inter)
+                with open(os.path.join(output, "{}_dice.csv".format(split)), "w") as g:
+                    g.write("Filename, Overall, Large, Small\n")
+                    for (filename, overall, large, small) in zip(dataset.fnames, overall_dice, large_dice, small_dice):
+                        g.write("{},{},{},{}\n".format(filename, overall, large, small))
 
-            f.write("{} dice (overall): {:.4f} ({:.4f} - {:.4f})\n".format(split, *echonet.utils.bootstrap(np.concatenate((large_inter, small_inter)), np.concatenate((large_union, small_union)), echonet.utils.dice_similarity_coefficient)))
-            f.write("{} dice (large):   {:.4f} ({:.4f} - {:.4f})\n".format(split, *echonet.utils.bootstrap(large_inter, large_union, echonet.utils.dice_similarity_coefficient)))
-            f.write("{} dice (small):   {:.4f} ({:.4f} - {:.4f})\n".format(split, *echonet.utils.bootstrap(small_inter, small_union, echonet.utils.dice_similarity_coefficient)))
-            f.flush()
+                f.write("{} dice (overall): {:.4f} ({:.4f} - {:.4f})\n".format(split, *echonet.utils.bootstrap(np.concatenate((large_inter, small_inter)), np.concatenate((large_union, small_union)), echonet.utils.dice_similarity_coefficient)))
+                f.write("{} dice (large):   {:.4f} ({:.4f} - {:.4f})\n".format(split, *echonet.utils.bootstrap(large_inter, large_union, echonet.utils.dice_similarity_coefficient)))
+                f.write("{} dice (small):   {:.4f} ({:.4f} - {:.4f})\n".format(split, *echonet.utils.bootstrap(small_inter, small_union, echonet.utils.dice_similarity_coefficient)))
+                f.flush()
 
     # Saving videos with segmentations
     def collate_fn(x):
