@@ -5,6 +5,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal
+import skimage.draw
 import torch
 import torchvision
 import tqdm
@@ -264,17 +265,16 @@ def run(num_epochs=50,
                         size = 1 - size
                         for (f, s) in enumerate(size):
                             img[:, :, int(round(115 + 100 * s)), int(round(f / len(size) * 200 + 10))] = 255.
-                            interval = np.array([-3, -2, -1, 0, 1, 2, 3])
-                            for a in interval:
-                                for b in interval:
-                                    img[f, :, a + int(round(115 + 100 * s)), b + int(round(f / len(size) * 200 + 10))] = 255.
 
-                                    if f == large_index[i]:
-                                        img[:, 0, a + int(round(115 + 100 * s)), b + int(round(f / len(size) * 200 + 10))] = 255.
-                                    if f == small_index[i]:
-                                        img[:, 1, a + int(round(115 + 100 * s)), b + int(round(f / len(size) * 200 + 10))] = 255.
+                            r, c = skimage.draw.circle(int(round(115 + 100 * s)), int(round(f / len(size) * 200 + 10)), 3.1)
+                            img[f, :, r, c] = 255.
+                            if f == large_index[i]:
+                                img[:, 0, r, c] = 255.
+                            if f == small_index[i]:
+                                img[:, 1, r, c] = 255.
+
                             if f in peaks:
-                                img[:, :, 200:225, b + int(round(f / len(size) * 200 + 10))] = 255.
+                                img[:, :, 200:225, int(round(f / len(size) * 200 + 10))] = 255.
                         img = img.transpose(1, 0, 2, 3)
                         img = img.astype(np.uint8)
                         echonet.utils.savevideo(os.path.join(output, "videos", filename), img, 50)
