@@ -60,9 +60,9 @@ install:
   - conda activate test-environment
   - pip install -q torchvision==${TORCHVISION_VERSION} "pillow<7.0.0"
   - pip install -q .
-  - pip install -q flake8
+  - pip install -q flake8 pylint
 
 script:
-  - flake8
-  - pylint
+  - flake8 --ignore=E501
+  - pylint --disable=C0103,C0301,R0401,R0801,R0902,R0912,R0913,R0914,R0915 --extension-pkg-whitelist=cv2,torch --generated-members=torch.* echonet/ scripts/*.py setup.py
   - python -c "import echonet"

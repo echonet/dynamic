@@ -8,21 +8,12 @@
   <meta name="description" content="EchoNet Dynamic: a Large New Cardiac Motion Video Data Resource for Medical Machine Learning."><!--#include file="lagunita.html" -->
   <!--Lagunita Theme (TODO: Server side include)-->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
-  <script src="lagunita/js/modernizr.custom.17475.js"></script>
-  <script src="lagunita/js/bootstrap.min.js"></script>
-  <script src="lagunita/js/base.js?v=1.0"></script>
-  <script src="lagunita/js/custom.js"></script>
   <link rel="stylesheet" href="lagunita/css/bootstrap.min.css" type="text/css">
   <link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" type="text/css">
   <link rel="stylesheet" href="lagunita/css/base.min.css?v=0.1" type="text/css">
-  <link rel="stylesheet" href="lagunita/css/custom.css?v=0.1" type="text/css"><!--End Lagunita Theme-->
+  <link rel="stylesheet" href="lagunita/css/custom.css?v=0.1" type="text/css">
+  <!--End Lagunita Theme-->
   <link rel="icon" type="image/ico" href="favicon.ico">
-  <style>
-    #mc_embed_signup{background:#E0E0E0; clear:left; font:16px Helvetica,Arial,sans-serif; }
-    /* Add your own Mailchimp form style overrides in your site stylesheet or in this style block.
-       We recommend moving this block and the preceding CSS link to the HEAD of your HTML file. */
-  </style>
 </head>
 <body class="site-slogan">
   <!--#include file="header.html" -->
@@ -84,7 +75,7 @@
                   <a href="index.html#access">Accessing Dataset</a>
                 </li>
                 <li id="nav-7">
-                  <a href="index.html#citation">Citation</a>
+                  <a href="index.html#paper">Paper</a>
                 </li>
               </ul>
             </div>
@@ -97,50 +88,18 @@
   <div id="intro" class="container" role="introduction" tabindex="0">
     <h2>Introduction</h2>
     <p>Echocardiography, or cardiac ultrasound, is the most widely used and readily available imaging technique to assess cardiac function and structure. Combining rapid image acquisition, high temporal resolution, and without the risks of ionizing radiation, echocardiography serves as the backbone of cardiovascular imaging and is one of the most frequently used imaging studies in the United States. For diseases ranging from cardiomyopathies to valvular heart diseases, echocardiography is both necessary and sufﬁcient to diagnose many cardiovascular diseases. We introduce a new large video dataset of echocardiograms for computer vision research. The EchoNet-Dynamic database includes 10,030 labeled echocardiogram videos and human expert tracing to provide images to study cardiac motion and chamber sizes.</p><br>
-    <video class="center" width="320" height="320" autoplay loop muted><source src="media/Example1.mp4" type="video/mp4"></video>
+    <video class="center" width="320" height="320" autoplay loop muted><source src="media/example_small.mp4" type="video/mp4"></video>
     <br>
     <p><h2 id="motivation">Motivation</h2>
     <p>Machine learning analysis of biomedical images has seen significant recent advances. In contrast, there has been much less work on medical videos, despite the fact that videos are routinely used in many clinical settings. A major bottleneck for this is the the lack of openly available and well annotated medical video data. Computer vision has benefited greatly from open databases which allow for collaboration, comparison, and creation of medical task specific architectures. We present the EchoNet-Dynamic Dataset of 10,030 echocardiography videos, spanning the range of typical echocardiography lab imaging acquisition conditions, with corresponding labeled measurements including ejection fraction, left ventricular volume at end-systole and end-diastole, and human expert tracings of the left ventricle as an aid in studying automated approaches to evaluate cardiac function. We additionally present the performance of 3D convolutional neural network architectures for video classification.
     These models are used to assess ejection fraction to near-expert human performance and as a benchmark for further collaboration, comparison, and creation of task-specific architectures. To the best of our knowledge, this is the largest labeled medical video dataset made available publicly to researchers and medical professionals and first public report of video-based 3D convolutional architectures to assess cardiac function.</p><br>
     <br>
-    <h2 id="dataset">Dataset</h2><p><img class="center" width=80% src="media/Schematic.webp">
-    <p><b>Echocardiogram Videos</b><p>: A standard full resting echocardiogram study consists of a series of videos and images visualizing the heart from different angles, locations, and image acquisition techniques. The dataset contains 10,030 echocardiography videos from individuals who underwent echocardiography between 2016 and 2018 as part of routine clinical care at Stanford University Hospital. Each video was cropped and masked to remove text, ECG signal, and other information outside of the scanning sector. The resulting square images were then downsampled by cubic interpolation into standardized 112x112 pixel videos.</p><br>
-    <p><img class="center" src="media/MetaDataVariables.webp">
-    <p><b>Measurements</b> <p> In addition to the video itself, each study is linked to clinical measurements and calculations obtained by a registered sonographer and veriﬁed by a level 3 echocardiographer in the standard clinical workﬂow. A central metric of cardiac function is the left ventricular ejection fraction, which is used to diagnose cardiomyopathy, assess eligibility for certain chemotherapies, and determine indication for medical devices. The ejection fraction is expressed as a percentage and is the ratio of left ventricular end systolic volume (ESV) and left ventricular end diastolic volume (EDV) determined by (EDV - ESV) / EDV.</p><br>
-    <p><img class="center" width="200" src="media/Tracings.webp">
-,   <p><b>Tracings</b>: In our dataset, and in standard echocardiography practice, the left ventricle is traced at the endocardial border at two separate time points representing end-systole and end-diastole for each video. Each tracing is used to estimate ventricular volume by integration of ventricular area over the length of the major axis of the ventricle. The expert tracings are represented by a collection of paired coordinates corresponding to each human tracing. The first pair of coordinates represent the length and direction of the long axis of the left ventricle, and subsequent coordinate pairs represent short axis linear distances starting from the apex of the heart to the mitral apparatus. Each coordinate pair is also listed with a video file name and frame number to identify the representative frame from which the tracings match. 
-
-    <!--
-    <h2 id="examples">Example Videos</h2>
-    <p>
-    We show examples of our semantic segmentation for nine distinct patients below.
-    Three patients have normal cardiac function, three have low ejection fractions, and three have arrhythmia.
-    No human tracings for these patients were used by EchoNet-Dynamic.
-    </p>
-
-    <table align="center" style="table-layout:fixed;width=100%">
-      <tr>
-        <th>Normal</th>
-        <th>Low Ejection Fraction</th>
-        <th>Arrhythmia</th>
-      </tr>
-      <tr>
-        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X10A28877E97DF540.mp4" type="video/mp4"></video></td>
-        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X129133A90A61A59D.mp4" type="video/mp4"></video></td>
-        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X132C1E8DBB715D1D.mp4" type="video/mp4"></video></td>
-      </tr>
-      <tr>
-        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X10B7505562B0A702.mp4" type="video/mp4"></video></td>
-        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X13CE2039E2D706A.mp4 " type="video/mp4"></video></td>
-        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X18BA5512BE5D6FFA.mp4" type="video/mp4"></video></td>
-      </tr>
-      <tr>
-        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X1167650B8BEFF863.mp4" type="video/mp4"></video></td>
-        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X16FC9AA0AD5D8136.mp4" type="video/mp4"></video></td>
-        <td><video class="center" width="320" height="160" autoplay="" loop=""><source src="media/0X1E12EEE43FD913E5.mp4" type="video/mp4"></video></td>
-      </tr>
-    </table>
-    -->
+    <h2 id="dataset">Dataset</h2><p><img class="center" loading="lazy" width="640" src="media/Schematic.webp">
+    <p><b>Echocardiogram Videos:</b> A standard full resting echocardiogram study consists of a series of videos and images visualizing the heart from different angles, locations, and image acquisition techniques. The dataset contains 10,030 echocardiography videos from individuals who underwent echocardiography between 2016 and 2018 as part of routine clinical care at Stanford University Hospital. Each video was cropped and masked to remove text, ECG signal, and other information outside of the scanning sector. The resulting square images were then downsampled by cubic interpolation into standardized 112x112 pixel videos.</p><br>
+    <p><img class="center" loading="lazy" width="640" src="media/MetaDataVariables.webp">
+    <p><b>Measurements:</b> In addition to the video itself, each study is linked to clinical measurements and calculations obtained by a registered sonographer and veriﬁed by a level 3 echocardiographer in the standard clinical workﬂow. A central metric of cardiac function is the left ventricular ejection fraction, which is used to diagnose cardiomyopathy, assess eligibility for certain chemotherapies, and determine indication for medical devices. The ejection fraction is expressed as a percentage and is the ratio of left ventricular end systolic volume (ESV) and left ventricular end diastolic volume (EDV) determined by (EDV - ESV) / EDV.</p><br>
+    <p><img class="center" loading="lazy" width="640" src="media/Tracings.webp">
+    <p><b>Tracings:</b> In our dataset, and in standard echocardiography practice, the left ventricle is traced at the endocardial border at two separate time points representing end-systole and end-diastole for each video. Each tracing is used to estimate ventricular volume by integration of ventricular area over the length of the major axis of the ventricle. The expert tracings are represented by a collection of paired coordinates corresponding to each human tracing. The first pair of coordinates represent the length and direction of the long axis of the left ventricle, and subsequent coordinate pairs represent short axis linear distances starting from the apex of the heart to the mitral apparatus. Each coordinate pair is also listed with a video file name and frame number to identify the representative frame from which the tracings match.</p><br>
     <h2 id="code">Code</h2>
     <p>Our code is available <a href="https://github.com/echonet/dynamic">here</a>.</p>
     <br>
@@ -165,6 +124,15 @@
       <p>You agree to indemnify and hold Stanford harmless from any claims, losses or damages, including legal fees, arising out of or resulting from your use of the EchoNet-Dynamic Dataset or your violation or role in violation of these Terms. You agree to fully cooperate in Stanford’s defense against any such claims. These Terms shall be governed by and interpreted in accordance with the laws of California.</p>
     </div><!-- Begin Mailchimp Signup Form -->
     <link href="//cdn-images.mailchimp.com/embedcode/classic-10_7.css" rel="stylesheet" type="text/css">
+    <style>#mc_embed_signup div.response{margin:1em 0;padding:1em .5em .5em 0;font-weight:700;float:left;top:-1.5em;z-index:1;width:80%}#mc_embed_signup #mce-error-response{display:none}#mc_embed_signup #mce-success-response{color:#529214;display:none}</style>
+    <style>
+      #mc_embed_signup{background:#E0E0E0; clear:left; font:14px Helvetica,Arial,sans-serif; }
+      #mc_embed_signup .mc-field-group {
+        padding-bottom: 5pt;
+      }
+      /* Add your own Mailchimp form style overrides in your site stylesheet or in this style block.
+         We recommend moving this block and the preceding CSS link to the HEAD of your HTML file. */
+    </style>
     <div id="mc_embed_signup">
       <form action="https://stanford.us20.list-manage.com/subscribe/post?u=82cbf8c827fff08d3cf158136&amp;id=e6a0c4b675" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank" novalidate="">
         <div id="mc_embed_signup_scroll">
@@ -943,10 +911,17 @@
     <br>
     <br>
     <footer>
-      <h2 id="citation">Citation</h2>
+      <h2 id="paper">Paper</h2>
       <p><a href="https://www.medrxiv.org/content/10.1101/19012419v2">Interpretable Artificial Intelligence for Beat-to-Beat Cardiac Function Assessment.</a><br>David Ouyang, Bryan He, Amirata Ghorbani, Neal Yuan, Joseph Ebinger, Curt P. Langlotz, Paul A. Heidenreich, Robert A. Harrington, David H. Liang, Euan A. Ashley, and James Y. Zou</p>
       <p>For inquiries, contact us at <a href="mailto:%20ouyangd@stanford.edu">ouyangd@stanford.edu</a>.</p>
     </footer>
   </div>
+  <!--Lagunita Theme (TODO: Server side include)-->
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+  <script src="lagunita/js/modernizr.custom.17475.js"></script>
+  <script src="lagunita/js/bootstrap.min.js"></script>
+  <script src="lagunita/js/base.js?v=1.0"></script>
+  <script src="lagunita/js/custom.js"></script>
+  <!--End Lagunita Theme-->
 </body>
 </html>
