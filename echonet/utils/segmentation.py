@@ -1,3 +1,5 @@
+"""Functions for training and running segmentation."""
+
 import math
 import os
 import time
@@ -141,7 +143,7 @@ def run(num_epochs=50,
                     torch.cuda.reset_max_memory_allocated(i)
                     torch.cuda.reset_max_memory_cached(i)
 
-                loss, large_inter, large_union, small_inter, small_union = echonet.utils.segmentation.run_epoch(model, dataloaders[phase], phase, optim, device)
+                loss, large_inter, large_union, small_inter, small_union = echonet.utils.segmentation.run_epoch(model, dataloaders[phase], phase == "train", optim, device)
                 overall_dice = 2 * (large_inter.sum() + small_inter.sum()) / (large_union.sum() + large_inter.sum() + small_union.sum() + small_inter.sum())
                 large_dice = 2 * large_inter.sum() / (large_union.sum() + large_inter.sum())
                 small_dice = 2 * small_inter.sum() / (small_union.sum() + small_inter.sum())
@@ -184,7 +186,7 @@ def run(num_epochs=50,
                 dataset = echonet.datasets.Echo(split=split, **kwargs)
                 dataloader = torch.utils.data.DataLoader(dataset,
                                                          batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
-                loss, large_inter, large_union, small_inter, small_union = echonet.utils.segmentation.run_epoch(model, dataloader, split, None, device)
+                loss, large_inter, large_union, small_inter, small_union = echonet.utils.segmentation.run_epoch(model, dataloader, False, None, device)
 
                 overall_dice = 2 * (large_inter + small_inter) / (large_union + large_inter + small_union + small_inter)
                 large_dice = 2 * large_inter / (large_union + large_inter)
@@ -279,7 +281,7 @@ def run(num_epochs=50,
                         video += mean.reshape(1, 3, 1, 1)
 
                         # Get frames, channels, height, and width
-                        f, c, h, w = video.shape
+                        f, c, h, w = video.shape  # pylint: disable=W0612
                         assert c == 3
 
                         # Put two copies of the video side by side
@@ -287,7 +289,7 @@ def run(num_epochs=50,
 
                         # If a pixel is in the segmentation, saturate blue channel
                         # Leave alone otherwise
-                        video[:, 0, :, w:] = np.maximum(255. * (logit > 0), video[:, 0, :, w:])
+                        video[:, 0, :, w:] = np.maximum(255. * (logit > 0), video[:, 0, :, w:])  # pylint: disable=E1111
 
                         # Add blank canvas under pair of videos
                         video = np.concatenate((video, np.zeros_like(video)), 2)
@@ -335,7 +337,7 @@ def run(num_epochs=50,
                                 video[:, :, 200:225, int(round(f / len(size) * 200 + 10))] = 255.
 
                             # Get pixels for a circle centered on the pixel
-                            r, c = skimage.draw.circle(int(round(115 + 100 * s)), int(round(f / len(size) * 200 + 10)), 3.1)
+                            r, c = skimage.draw.circle(int(round(115 + 100 * s)), int(round(f / len(size) * 200 + 10)), 4.1)
 
                             # On the frame that's being shown, put a circle over the pixel
                             video[f, :, r, c] = 255.
@@ -356,7 +358,16 @@ def run(num_epochs=50,
                         start += offset
 
 
-def run_epoch(model, dataloader, phase, optim, device):
+def run_epoch(model, dataloader, train, optim, device):
+    """Run one epoch of training/evaluation for segmentation.
+
+    Args:
+        model (torch.nn.Module): Model to train/evaulate.
+        dataloder (torch.utils.data.DataLoader): Dataloader for dataset.
+        train (bool): Whether or not to train model.
+        optim (torch.optim.Optimizer): Optimizer
+        device (torch.device): Device to run on
+    """
 
     total = 0.
     n = 0
@@ -366,7 +377,7 @@ def run_epoch(model, dataloader, phase, optim, device):
     pos_pix = 0
     neg_pix = 0
 
-    model.train(phase == 'train')
+    model.train(train)
 
     large_inter = 0
     large_union = 0
@@ -377,53 +388,57 @@ def run_epoch(model, dataloader, phase, optim, device):
     small_inter_list = []
     small_union_list = []
 
-    with torch.set_grad_enabled(phase == 'train'):
+    with torch.set_grad_enabled(train):
         with tqdm.tqdm(total=len(dataloader)) as pbar:
             for (_, (large_frame, small_frame, large_trace, small_trace)) in dataloader:
+                # Count number of pixels in/out of human segmentation
                 pos += (large_trace == 1).sum().item()
                 pos += (small_trace == 1).sum().item()
                 neg += (large_trace == 0).sum().item()
                 neg += (small_trace == 0).sum().item()
 
+                # Count number of pixels in/out of computer segmentation
                 pos_pix += (large_trace == 1).sum(0).to("cpu").detach().numpy()
                 pos_pix += (small_trace == 1).sum(0).to("cpu").detach().numpy()
                 neg_pix += (large_trace == 0).sum(0).to("cpu").detach().numpy()
                 neg_pix += (small_trace == 0).sum(0).to("cpu").detach().numpy()
 
+                # Run prediction for diastolic frames and compute loss
                 large_frame = large_frame.to(device)
                 large_trace = large_trace.to(device)
                 y_large = model(large_frame)["out"]
                 loss_large = torch.nn.functional.binary_cross_entropy_with_logits(y_large[:, 0, :, :], large_trace, reduction="sum")
+                # Compute pixel intersection and union between human and computer segmentations
                 large_inter += np.logical_and(y_large[:, 0, :, :].detach().cpu().numpy() > 0., large_trace[:, :, :].detach().cpu().numpy() > 0.).sum()
                 large_union += np.logical_or(y_large[:, 0, :, :].detach().cpu().numpy() > 0., large_trace[:, :, :].detach().cpu().numpy() > 0.).sum()
-                large_inter_list.extend(np.logical_and(y_large[:, 0, :, :].detach().cpu().numpy() > 0., large_trace[:, :, :].detach().cpu().numpy() > 0.).sum(2).sum(1))
-                large_union_list.extend(np.logical_or(y_large[:, 0, :, :].detach().cpu().numpy() > 0., large_trace[:, :, :].detach().cpu().numpy() > 0.).sum(2).sum(1))
+                large_inter_list.extend(np.logical_and(y_large[:, 0, :, :].detach().cpu().numpy() > 0., large_trace[:, :, :].detach().cpu().numpy() > 0.).sum((1, 2)))
+                large_union_list.extend(np.logical_or(y_large[:, 0, :, :].detach().cpu().numpy() > 0., large_trace[:, :, :].detach().cpu().numpy() > 0.).sum((1, 2)))
 
+                # Run prediction for systolic frames and compute loss
                 small_frame = small_frame.to(device)
                 small_trace = small_trace.to(device)
                 y_small = model(small_frame)["out"]
                 loss_small = torch.nn.functional.binary_cross_entropy_with_logits(y_small[:, 0, :, :], small_trace, reduction="sum")
+                # Compute pixel intersection and union between human and computer segmentations
                 small_inter += np.logical_and(y_small[:, 0, :, :].detach().cpu().numpy() > 0., small_trace[:, :, :].detach().cpu().numpy() > 0.).sum()
                 small_union += np.logical_or(y_small[:, 0, :, :].detach().cpu().numpy() > 0., small_trace[:, :, :].detach().cpu().numpy() > 0.).sum()
-                small_inter_list.extend(np.logical_and(y_small[:, 0, :, :].detach().cpu().numpy() > 0., small_trace[:, :, :].detach().cpu().numpy() > 0.).sum(2).sum(1))
-                small_union_list.extend(np.logical_or(y_small[:, 0, :, :].detach().cpu().numpy() > 0., small_trace[:, :, :].detach().cpu().numpy() > 0.).sum(2).sum(1))
+                small_inter_list.extend(np.logical_and(y_small[:, 0, :, :].detach().cpu().numpy() > 0., small_trace[:, :, :].detach().cpu().numpy() > 0.).sum((1, 2)))
+                small_union_list.extend(np.logical_or(y_small[:, 0, :, :].detach().cpu().numpy() > 0., small_trace[:, :, :].detach().cpu().numpy() > 0.).sum((1, 2)))
 
-                pos += (large_trace == 1).sum().item()
-                pos += (small_trace == 1).sum().item()
-                neg += (large_trace == 0).sum().item()
-                neg += (small_trace == 0).sum().item()
-
+                # Take gradient step if training
                 loss = (loss_large + loss_small) / 2
-                if phase == 'train':
+                if train:
                     optim.zero_grad()
                     loss.backward()
                     optim.step()
 
+                # Accumulate losses and compute baselines
                 total += loss.item()
                 n += large_trace.size(0)
-
                 p = pos / (pos + neg)
                 p_pix = (pos_pix + 1) / (pos_pix + neg_pix + 2)
+
+                # Show info on process bar
                 pbar.set_postfix_str("{:.4f} ({:.4f}) / {:.4f} {:.4f}, {:.4f}, {:.4f}".format(total / n / 112 / 112, loss.item() / large_trace.size(0) / 112 / 112, -p * math.log(p) - (1 - p) * math.log(1 - p), (-p_pix * np.log(p_pix) - (1 - p_pix) * np.log(1 - p_pix)).mean(), 2 * large_inter / (large_union + large_inter), 2 * small_inter / (small_union + small_inter)))
                 pbar.update()
 

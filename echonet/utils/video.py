@@ -1,3 +1,5 @@
+"""Functions for training and running EF prediction."""
+
 import math
 import os
 import time
@@ -137,7 +139,7 @@ def run(num_epochs=45,
                 for i in range(torch.cuda.device_count()):
                     torch.cuda.reset_max_memory_allocated(i)
                     torch.cuda.reset_max_memory_cached(i)
-                loss, yhat, y = echonet.utils.video.run_epoch(model, dataloaders[phase], phase, optim, device)
+                loss, yhat, y = echonet.utils.video.run_epoch(model, dataloaders[phase], phase == "train", optim, device)
                 f.write("{},{},{},{},{},{},{},{},{}\n".format(epoch,
                                                               phase,
                                                               loss,
@@ -179,7 +181,7 @@ def run(num_epochs=45,
                 dataloader = torch.utils.data.DataLoader(
                     echonet.datasets.Echo(split=split, **kwargs),
                     batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
-                loss, yhat, y = echonet.utils.video.run_epoch(model, dataloader, split, None, device)
+                loss, yhat, y = echonet.utils.video.run_epoch(model, dataloader, False, None, device)
                 f.write("{} (one clip) R2:   {:.3f} ({:.3f} - {:.3f})\n".format(split, *echonet.utils.bootstrap(y, yhat, sklearn.metrics.r2_score)))
                 f.write("{} (one clip) MAE:  {:.2f} ({:.2f} - {:.2f})\n".format(split, *echonet.utils.bootstrap(y, yhat, sklearn.metrics.mean_absolute_error)))
                 f.write("{} (one clip) RMSE: {:.2f} ({:.2f} - {:.2f})\n".format(split, *tuple(map(math.sqrt, echonet.utils.bootstrap(y, yhat, sklearn.metrics.mean_squared_error)))))
@@ -189,7 +191,7 @@ def run(num_epochs=45,
                 ds = echonet.datasets.Echo(split=split, **kwargs, clips="all")
                 dataloader = torch.utils.data.DataLoader(
                     ds, batch_size=1, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
-                loss, yhat, y = echonet.utils.video.run_epoch(model, dataloader, split, None, device, save_all=True, blocks=100)
+                loss, yhat, y = echonet.utils.video.run_epoch(model, dataloader, False, None, device, save_all=True, block_size=100)
                 f.write("{} (all clips) R2:   {:.3f} ({:.3f} - {:.3f})\n".format(split, *echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.r2_score)))
                 f.write("{} (all clips) MAE:  {:.2f} ({:.2f} - {:.2f})\n".format(split, *echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.mean_absolute_error)))
                 f.write("{} (all clips) RMSE: {:.2f} ({:.2f} - {:.2f})\n".format(split, *tuple(map(math.sqrt, echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.mean_squared_error)))))
@@ -236,22 +238,36 @@ def run(num_epochs=45,
                 plt.close(fig)
 
 
-def run_epoch(model, dataloader, phase, optim, device, save_all=False, blocks=None):
+def run_epoch(model, dataloader, train, optim, device, save_all=False, block_size=None):
+    """Run one epoch of training/evaluation for segmentation.
 
-    criterion = torch.nn.MSELoss()  # Standard L2 loss
+    Args:
+        model (torch.nn.Module): Model to train/evaulate.
+        dataloder (torch.utils.data.DataLoader): Dataloader for dataset.
+        train (bool): Whether or not to train model.
+        optim (torch.optim.Optimizer): Optimizer
+        device (torch.device): Device to run on
+        save_all (bool, optional): If True, return predictions for all
+            test-time augmentations separately. If False, return only
+            the mean prediction.
+            Defaults to False.
+        block_size (int or None, optional): Maximum number of augmentations
+            to run on at the same time. Use to limit the amount of memory
+            used. If None, always run on all augmentations simultaneously.
+            Default is None.
+    """
 
-    runningloss = 0.0
+    model.train(train)
 
-    model.train(phase == 'train')
-
-    counter = 0
-    summer = 0
-    summer_squared = 0
+    total = 0  # total training loss
+    n = 0      # number of videos processed
+    s1 = 0     # sum of ground truth EF
+    s2 = 0     # Sum of ground truth EF squared
 
     yhat = []
     y = []
 
-    with torch.set_grad_enabled(phase == 'train'):
+    with torch.set_grad_enabled(train):
         with tqdm.tqdm(total=len(dataloader)) as pbar:
             for (X, outcome) in dataloader:
 
@@ -264,13 +280,13 @@ def run_epoch(model, dataloader, phase, optim, device, save_all=False, blocks=No
                     batch, n_clips, c, f, h, w = X.shape
                     X = X.view(-1, c, f, h, w)
 
-                summer += outcome.sum()
-                summer_squared += (outcome ** 2).sum()
+                s1 += outcome.sum()
+                s2 += (outcome ** 2).sum()
 
-                if blocks is None:
+                if block_size is None:
                     outputs = model(X)
                 else:
-                    outputs = torch.cat([model(X[j:(j + blocks), ...]) for j in range(0, X.shape[0], blocks)])
+                    outputs = torch.cat([model(X[j:(j + block_size), ...]) for j in range(0, X.shape[0], block_size)])
 
                 if save_all:
                     yhat.append(outputs.view(-1).to("cpu").detach().numpy())
@@ -281,25 +297,21 @@ def run_epoch(model, dataloader, phase, optim, device, save_all=False, blocks=No
                 if not save_all:
                     yhat.append(outputs.view(-1).to("cpu").detach().numpy())
 
-                loss = criterion(outputs.view(-1), outcome)
+                loss = torch.nn.functional.mse_loss(outputs.view(-1), outcome)
 
-                if phase == 'train':
+                if train:
                     optim.zero_grad()
                     loss.backward()
                     optim.step()
 
-                runningloss += loss.item() * X.size(0)
-                counter += X.size(0)
+                total += loss.item() * X.size(0)
+                n += X.size(0)
 
-                epoch_loss = runningloss / counter
-
-                # str(i, runningloss, epoch_loss,  str(((summer_squared) / counter - (summer / counter)**2).item()))
-
-                pbar.set_postfix_str("{:.2f} ({:.2f}) / {:.2f}".format(epoch_loss, loss.item(), summer_squared / counter - (summer / counter) ** 2))
+                pbar.set_postfix_str("{:.2f} ({:.2f}) / {:.2f}".format(total / n, loss.item(), s2 / n - (s1 / n) ** 2))
                 pbar.update()
 
     if not save_all:
         yhat = np.concatenate(yhat)
     y = np.concatenate(y)
 
-    return epoch_loss, yhat, y
+    return total / n, yhat, y
