@@ -244,14 +244,14 @@ def run(num_epochs=50,
 
         return video, target, i
 
-    dataset = echonet.datasets.Echo(split="all",
+    dataset = echonet.datasets.Echo(split="test",
                                     target_type=["Filename", "LargeIndex", "SmallIndex"],  # Need filename for saving, and human-selected frames to annotate
                                     mean=mean, std=std,  # Normalization
                                     length=None, max_length=None, period=1  # Take all frames
                                     )
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=10, num_workers=0, shuffle=False, pin_memory=False, collate_fn=collate_fn)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=10, num_workers=num_workers, shuffle=False, pin_memory=False, collate_fn=collate_fn)
 
-    # Save videos for all frames
+    # Save videos with segmentation
     if save_segmentation and not all([os.path.isfile(os.path.join(output, "videos", f)) for f in dataloader.dataset.fnames]):
         # Only run if missing videos
 
@@ -342,12 +342,12 @@ def run(num_epochs=50,
                             # On the frame that's being shown, put a circle over the pixel
                             video[f, :, r, c] = 255.
 
-                            if f == large_index[i]:
-                                # If frame is human-selected diastole, mark with blue circle on all frames
-                                video[:, 0, r, c] = 255.
-                            if f == small_index[i]:
-                                # If frame is human-selected systole, mark with green circle on all frames
-                                video[:, 1, r, c] = 255.
+                            # if f == large_index[i]:
+                            #     # If frame is human-selected diastole, mark with blue circle on all frames
+                            #     video[:, 0, r, c] = 255.
+                            # if f == small_index[i]:
+                            #     # If frame is human-selected systole, mark with green circle on all frames
+                            #     video[:, 1, r, c] = 255.
 
                         # Rearrange dimensions and save
                         video = video.transpose(1, 0, 2, 3)
