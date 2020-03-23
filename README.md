@@ -6,7 +6,7 @@ EchoNet-Dynamic is a end-to-end beat-to-beat deep learning model for
   2) prediction of ejection fraction by entire video or subsampled clips, and
   3) assessment of cardiomyopathy with reduced ejection fraction.
 
-For more details, see the acompanying paper,
+For more details, see the accompanying paper,
 
 > [**Interpretable AI for beat-to-beat cardiac function assessment**](https://www.medrxiv.org/content/10.1101/19012419v2)<br/>
   by David Ouyang, Bryan He, Amirata Ghorbani, Curt P. Langlotz, Paul A. Heidenreich, Robert A. Harrington, David H. Liang, Euan A. Ashley, and James Y. Zou
