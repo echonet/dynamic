@@ -12,7 +12,7 @@ for filename in ["echonet.cfg",
                  os.path.expanduser("~/.echonet.cfg"),
                  ]:
     if os.path.isfile(filename):
-        FILENAME = filename
+        _FILENAME = filename
         config = configparser.ConfigParser()
         with open(filename, "r") as f:
             config.read_string("[config]\n" + f.read())
@@ -20,5 +20,5 @@ for filename in ["echonet.cfg",
         break
 
 CONFIG = types.SimpleNamespace(
-    FILENAME=FILENAME,
+    FILENAME=_FILENAME,
     DATA_DIR=_PARAM.get("data_dir", "a4c-video-dir/"))

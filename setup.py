@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Metadata for package to allow installation with pip."""
 
-import setuptools
 import os
+
+import setuptools
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -12,7 +13,7 @@ with open("README.md", "r") as fh:
 # https://packaging.python.org/guides/single-sourcing-package-version/
 version = {}
 with open(os.path.join("echonet", "__version__.py")) as f:
-    exec(f.read(), version)
+    exec(f.read(), version)  # pylint: disable=W0122
 
 setuptools.setup(
     name="echonet",
