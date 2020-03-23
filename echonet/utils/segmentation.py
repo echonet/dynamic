@@ -350,10 +350,10 @@ def run(num_epochs=50,
 
                             if f == large_index[i]:
                                 # If frame is human-selected diastole, mark with green dashed line on all frames
-                                video[:, :, d, int(round(f / len(size) * 200 + 10))] = np.array([0, 225, 0]).reshape(1, 3, 1)
+                                video[:, :, d, int(round(f / len(size) * 200 + 10))] = np.array([0, 225, 0]).reshape((1, 3, 1))
                             if f == small_index[i]:
                                 # If frame is human-selected systole, mark with red dashed line on all frames
-                                video[:, :, d, int(round(f / len(size) * 200 + 10))] = np.array([0, 0, 225]).reshape(1, 3, 1)
+                                video[:, :, d, int(round(f / len(size) * 200 + 10))] = np.array([0, 0, 225]).reshape((1, 3, 1))
 
                             # Get pixels for a circle centered on the pixel
                             r, c = skimage.draw.circle(int(round(115 + 100 * s)), int(round(f / len(size) * 200 + 10)), 4.1)
