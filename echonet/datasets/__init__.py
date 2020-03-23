@@ -1,5 +1,5 @@
 """
-The echonet.datasets submodule defined a Pytorch dataset for loading
+The echonet.datasets submodule defines a Pytorch dataset for loading
 echocardiogram videos.
 """
 
