@@ -424,6 +424,7 @@ def run_epoch(model, dataloader, train, optim, device):
             small_union_list,
             )
 
+
 def _video_collate_fn(x):
     """Collate function for Pytorch dataloader to merge multiple videos.
 
