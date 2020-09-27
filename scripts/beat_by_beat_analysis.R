@@ -69,7 +69,6 @@ summary(modelBeatByBeat)$r.squared
 
 
 beatByBeatAnalysis <- merge(sizeRelevantFrames, data, by.x = c("Filename", "Frame"), by.y = c("V1", "V2"))
-beatByBeatAnalysis <- beatByBeatAnalysis[beatByBeatAnalysis$Filename %in% highVar,]
 str(beatByBeatAnalysis)
 
 
@@ -82,7 +81,7 @@ str(MAEdata)
 for (i in 1:500){
 
 
-samplingBeat <-  sample_n(beatByBeatAnalysis %>% group_by(Filename), 1 + floor((i-1)/100), replace = TRUE) %>% group_by(Filename) %>% summarize(meanPred = mean(V3))
+samplingBeat <-  sample_n(beatByBeatAnalysis %>% group_by(Filename), 1 + floor((i-1)/100), replace = TRUE) %>% group_by(Filename) %>% dplyr::summarize(meanPred = mean(V3))
 samplingBeat <- merge(samplingBeat, ActualNumbers, by.x = "Filename", by.y = "Filename", all.x = TRUE)
 samplingBeat$error <- abs(samplingBeat$meanPred - samplingBeat$EF)
 
