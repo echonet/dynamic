@@ -74,7 +74,7 @@ class Echo(torch.utils.data.Dataset):
             root = echonet.config.DATA_DIR
 
         self.folder = pathlib.Path(root)
-        self.split = split
+        self.split = split.upper()
         if not isinstance(target_type, list):
             target_type = [target_type]
         self.target_type = target_type
@@ -91,7 +91,7 @@ class Echo(torch.utils.data.Dataset):
 
         self.fnames, self.outcome = [], []
 
-        if split == "external_test":
+        if self.split == "EXTERNAL_TEST":
             self.fnames = sorted(os.listdir(self.external_test_location))
         else:
             with open(self.folder / "FileList.csv") as f:
@@ -103,9 +103,9 @@ class Echo(torch.utils.data.Dataset):
                     lineSplit = line.strip().split(',')
 
                     fileName = lineSplit[filenameIndex]
-                    fileMode = lineSplit[splitIndex].lower()
+                    fileMode = lineSplit[splitIndex].upper()
 
-                    if split in ["all", fileMode] and os.path.exists(self.folder / "Videos" / fileName):
+                    if self.split in ["all", fileMode] and os.path.exists(self.folder / "Videos" / fileName):
                         self.fnames.append(fileName)
                         self.outcome.append(lineSplit)
 
@@ -136,9 +136,9 @@ class Echo(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         # Find filename of video
-        if self.split == "external_test":
+        if self.split == "EXTERNAL_TEST":
             video = os.path.join(self.external_test_location, self.fnames[index])
-        elif self.split == "clinical_test":
+        elif self.split == "CLINICAL_TEST":
             video = os.path.join(self.folder, "ProcessedStrainStudyA4c", self.fnames[index])
         else:
             video = os.path.join(self.folder, "Videos", self.fnames[index])
@@ -226,7 +226,7 @@ class Echo(torch.utils.data.Dataset):
                 mask[r, c] = 1
                 target.append(mask)
             else:
-                if self.split == "clinical_test" or self.split == "external_test":
+                if self.split == "CLINICAL_TEST" or self.split == "EXTERNAL_TEST":
                     target.append(np.float32(0))
                 else:
                     target.append(np.float32(self.outcome[index][self.header.index(t)]))
