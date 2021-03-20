@@ -3,19 +3,20 @@
 import pathlib
 import os
 import collections
+import pandas
 
 import numpy as np
 import skimage.draw
-import torch.utils.data
+import torchvision
 import echonet
 
 
-class Echo(torch.utils.data.Dataset):
+class Echo(torchvision.datasets.VisionDataset):
     """EchoNet-Dynamic Dataset.
 
     Args:
         root (string): Root directory of dataset (defaults to `echonet.config.DATA_DIR`)
-        split (string): One of {"train", "val", "test", "external_test"}
+        split (string): One of {``train'', ``val'', ``test'', ``all'', or ``external_test''}
         target_type (string or list, optional): Type of target to use,
             ``Filename'', ``EF'', ``EDV'', ``ESV'', ``LargeIndex'',
             ``SmallIndex'', ``LargeFrame'', ``SmallFrame'', ``LargeTrace'',
@@ -69,11 +70,12 @@ class Echo(torch.utils.data.Dataset):
                  noise=None,
                  target_transform=None,
                  external_test_location=None):
+        super().__init__(root, target_transform=target_transform)
 
         if root is None:
             root = echonet.config.DATA_DIR
 
-        self.folder = pathlib.Path(root)
+        self.root = pathlib.Path(root)
         self.split = split.upper()
         if not isinstance(target_type, list):
             target_type = [target_type]
@@ -94,25 +96,31 @@ class Echo(torch.utils.data.Dataset):
         if self.split == "EXTERNAL_TEST":
             self.fnames = sorted(os.listdir(self.external_test_location))
         else:
-            with open(self.folder / "FileList.csv") as f:
-                self.header = f.readline().strip().split(",")
-                filenameIndex = self.header.index("FileName")
-                splitIndex = self.header.index("Split")
+            # Load video-level labels
+            with open(self.root / "FileList.csv") as f:
+                data = pandas.read_csv(f)
+            data["Split"].map(lambda x: x.upper())
 
-                for line in f:
-                    lineSplit = line.strip().split(',')
+            if self.split != "ALL":
+                data = data[data["Split"] == self.split]
 
-                    fileName = lineSplit[filenameIndex]
-                    fileMode = lineSplit[splitIndex].upper()
+            self.header = data.columns.tolist()
+            self.fnames = data["FileName"].tolist()
+            self.outcome = data.values.tolist()
 
-                    if self.split in ["all", fileMode] and os.path.exists(self.folder / "Videos" / fileName):
-                        self.fnames.append(fileName)
-                        self.outcome.append(lineSplit)
+            # Check that files are present
+            missing = set(self.fnames) - set(os.listdir(self.root / "Videos"))
+            if len(missing) != 0:
+                print("{} videos could not be found in {}:".format(len(missing), self.root / "Videos"))
+                for f in sorted(missing):
+                    print("\t", f)
+                raise FileNotFoundError(self.root / "Videos" / sorted(missing)[0])
 
+            # Load traces
             self.frames = collections.defaultdict(list)
             self.trace = collections.defaultdict(_defaultdict_of_lists)
 
-            with open(self.folder / "VolumeTracings.csv") as f:
+            with open(self.root / "VolumeTracings.csv") as f:
                 header = f.readline().strip().split(",")
                 assert header == ["FileName", "X1", "Y1", "X2", "Y2", "Frame"]
 
@@ -139,9 +147,9 @@ class Echo(torch.utils.data.Dataset):
         if self.split == "EXTERNAL_TEST":
             video = os.path.join(self.external_test_location, self.fnames[index])
         elif self.split == "CLINICAL_TEST":
-            video = os.path.join(self.folder, "ProcessedStrainStudyA4c", self.fnames[index])
+            video = os.path.join(self.root, "ProcessedStrainStudyA4c", self.fnames[index])
         else:
-            video = os.path.join(self.folder, "Videos", self.fnames[index])
+            video = os.path.join(self.root, "Videos", self.fnames[index])
 
         # Load video into np.array
         video = echonet.utils.loadvideo(video).astype(np.float32)
@@ -257,6 +265,11 @@ class Echo(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.fnames)
+
+    def extra_repr(self) -> str:
+        """Additional information to add at end of __repr__."""
+        lines = ["Target type: {target_type}", "Split: {split}"]
+        return '\n'.join(lines).format(**self.__dict__)
 
 
 def _defaultdict_of_lists():

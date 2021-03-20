@@ -140,8 +140,7 @@ def run(num_epochs=50,
             for phase in ['train', 'val']:
                 start_time = time.time()
                 for i in range(torch.cuda.device_count()):
-                    torch.cuda.reset_max_memory_allocated(i)
-                    torch.cuda.reset_max_memory_cached(i)
+                    torch.cuda.reset_peak_memory_stats(i)
 
                 loss, large_inter, large_union, small_inter, small_union = echonet.utils.segmentation.run_epoch(model, dataloaders[phase], phase == "train", optim, device)
                 overall_dice = 2 * (large_inter.sum() + small_inter.sum()) / (large_union.sum() + large_inter.sum() + small_union.sum() + small_inter.sum())
@@ -210,7 +209,7 @@ def run(num_epochs=50,
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=10, num_workers=num_workers, shuffle=False, pin_memory=False, collate_fn=_video_collate_fn)
 
     # Save videos with segmentation
-    if save_segmentation and not all([os.path.isfile(os.path.join(output, "videos", f)) for f in dataloader.dataset.fnames]):
+    if save_segmentation and not all(os.path.isfile(os.path.join(output, "videos", f)) for f in dataloader.dataset.fnames):
         # Only run if missing videos
 
         model.eval()

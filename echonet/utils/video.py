@@ -137,13 +137,13 @@ def run(num_epochs=45,
             for phase in ['train', 'val']:
                 start_time = time.time()
                 for i in range(torch.cuda.device_count()):
-                    torch.cuda.reset_max_memory_allocated(i)
-                    torch.cuda.reset_max_memory_cached(i)
+                    torch.cuda.reset_peak_memory_stats(i)
+
                 loss, yhat, y = echonet.utils.video.run_epoch(model, dataloaders[phase], phase == "train", optim, device)
                 f.write("{},{},{},{},{},{},{},{},{}\n".format(epoch,
                                                               phase,
                                                               loss,
-                                                              sklearn.metrics.r2_score(yhat, y),
+                                                              sklearn.metrics.r2_score(y, yhat),
                                                               time.time() - start_time,
                                                               y.size,
                                                               sum(torch.cuda.max_memory_allocated() for i in range(torch.cuda.device_count())),
@@ -160,7 +160,7 @@ def run(num_epochs=45,
                 'frames': frames,
                 'best_loss': bestLoss,
                 'loss': loss,
-                'r2': sklearn.metrics.r2_score(yhat, y),
+                'r2': sklearn.metrics.r2_score(y, yhat),
                 'opt_dict': optim.state_dict(),
                 'scheduler_dict': scheduler.state_dict(),
             }
@@ -191,7 +191,7 @@ def run(num_epochs=45,
                 ds = echonet.datasets.Echo(split=split, **kwargs, clips="all")
                 dataloader = torch.utils.data.DataLoader(
                     ds, batch_size=1, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
-                loss, yhat, y = echonet.utils.video.run_epoch(model, dataloader, False, None, device, save_all=True, block_size=100)
+                loss, yhat, y = echonet.utils.video.run_epoch(model, dataloader, False, None, device, save_all=True, block_size=batch_size)
                 f.write("{} (all clips) R2:   {:.3f} ({:.3f} - {:.3f})\n".format(split, *echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.r2_score)))
                 f.write("{} (all clips) MAE:  {:.2f} ({:.2f} - {:.2f})\n".format(split, *echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.mean_absolute_error)))
                 f.write("{} (all clips) RMSE: {:.2f} ({:.2f} - {:.2f})\n".format(split, *tuple(map(math.sqrt, echonet.utils.bootstrap(y, np.array(list(map(lambda x: x.mean(), yhat))), sklearn.metrics.mean_squared_error)))))
