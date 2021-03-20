@@ -137,8 +137,8 @@ def run(num_epochs=45,
             for phase in ['train', 'val']:
                 start_time = time.time()
                 for i in range(torch.cuda.device_count()):
-                    torch.cuda.reset_max_memory_allocated(i)
-                    torch.cuda.reset_max_memory_cached(i)
+                    torch.cuda.reset_peak_memory_stats(i)
+
                 loss, yhat, y = echonet.utils.video.run_epoch(model, dataloaders[phase], phase == "train", optim, device)
                 f.write("{},{},{},{},{},{},{},{},{}\n".format(epoch,
                                                               phase,
