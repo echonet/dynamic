@@ -7,11 +7,11 @@ import pandas
 
 import numpy as np
 import skimage.draw
-import torch.utils.data
+import torchvision
 import echonet
 
 
-class Echo(torch.utils.data.Dataset):
+class Echo(torchvision.datasets.VisionDataset):
     """EchoNet-Dynamic Dataset.
 
     Args:
@@ -70,11 +70,12 @@ class Echo(torch.utils.data.Dataset):
                  noise=None,
                  target_transform=None,
                  external_test_location=None):
+        super().__init__(root, target_transform=target_transform)
 
         if root is None:
             root = echonet.config.DATA_DIR
 
-        self.folder = pathlib.Path(root)
+        self.root = pathlib.Path(root)
         self.split = split.upper()
         if not isinstance(target_type, list):
             target_type = [target_type]
@@ -96,7 +97,7 @@ class Echo(torch.utils.data.Dataset):
             self.fnames = sorted(os.listdir(self.external_test_location))
         else:
             # Load video-level labels
-            with open(self.folder / "FileList.csv") as f:
+            with open(self.root / "FileList.csv") as f:
                 data = pandas.read_csv(f)
             data["Split"].map(lambda x: x.upper())
 
@@ -108,18 +109,18 @@ class Echo(torch.utils.data.Dataset):
             self.outcome = data.values.tolist()
 
             # Check that files are present
-            missing = set(self.fnames) - set(os.listdir(self.folder / "Videos"))
+            missing = set(self.fnames) - set(os.listdir(self.root / "Videos"))
             if len(missing) != 0:
-                print("{} videos could not be found in {}:".format(len(missing), self.folder / "Videos"))
+                print("{} videos could not be found in {}:".format(len(missing), self.root / "Videos"))
                 for f in sorted(missing):
                     print("\t", f)
-                raise FileNotFoundError(self.folder / "Videos" / sorted(missing)[0])
+                raise FileNotFoundError(self.root / "Videos" / sorted(missing)[0])
 
             # Load traces
             self.frames = collections.defaultdict(list)
             self.trace = collections.defaultdict(_defaultdict_of_lists)
 
-            with open(self.folder / "VolumeTracings.csv") as f:
+            with open(self.root / "VolumeTracings.csv") as f:
                 header = f.readline().strip().split(",")
                 assert header == ["FileName", "X1", "Y1", "X2", "Y2", "Frame"]
 
@@ -146,9 +147,9 @@ class Echo(torch.utils.data.Dataset):
         if self.split == "EXTERNAL_TEST":
             video = os.path.join(self.external_test_location, self.fnames[index])
         elif self.split == "CLINICAL_TEST":
-            video = os.path.join(self.folder, "ProcessedStrainStudyA4c", self.fnames[index])
+            video = os.path.join(self.root, "ProcessedStrainStudyA4c", self.fnames[index])
         else:
-            video = os.path.join(self.folder, "Videos", self.fnames[index])
+            video = os.path.join(self.root, "Videos", self.fnames[index])
 
         # Load video into np.array
         video = echonet.utils.loadvideo(video).astype(np.float32)
@@ -264,6 +265,11 @@ class Echo(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.fnames)
+
+    def extra_repr(self) -> str:
+        """Additional information to add at end of __repr__."""
+        lines = ["Target type: {target_type}", "Split: {split}"]
+        return '\n'.join(lines).format(**self.__dict__)
 
 
 def _defaultdict_of_lists():
