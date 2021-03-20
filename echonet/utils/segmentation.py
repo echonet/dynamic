@@ -209,7 +209,7 @@ def run(num_epochs=50,
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=10, num_workers=num_workers, shuffle=False, pin_memory=False, collate_fn=_video_collate_fn)
 
     # Save videos with segmentation
-    if save_segmentation and not all([os.path.isfile(os.path.join(output, "videos", f)) for f in dataloader.dataset.fnames]):
+    if save_segmentation and not all(os.path.isfile(os.path.join(output, "videos", f)) for f in dataloader.dataset.fnames):
         # Only run if missing videos
 
         model.eval()

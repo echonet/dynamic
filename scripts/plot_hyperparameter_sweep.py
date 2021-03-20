@@ -138,9 +138,9 @@ def load(root, model, frames, period, pretrained):
         "{}_{}_{}_{}".format(model, frames, period, pretrained),
         "log.csv")
     with open(f, "r") as f:
-        for l in f:
-            if "Best validation loss " in l:
-                return float(l.split()[3])
+        for line in f:
+            if "Best validation loss " in line:
+                return float(line.split()[3])
 
     raise ValueError("File missing information.")
 
