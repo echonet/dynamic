@@ -3,6 +3,7 @@
 import pathlib
 import os
 import collections
+import pandas
 
 import numpy as np
 import skimage.draw
@@ -15,7 +16,7 @@ class Echo(torch.utils.data.Dataset):
 
     Args:
         root (string): Root directory of dataset (defaults to `echonet.config.DATA_DIR`)
-        split (string): One of {"train", "val", "test", "external_test"}
+        split (string): One of {``train'', ``val'', ``test'', ``all'', or ``external_test''}
         target_type (string or list, optional): Type of target to use,
             ``Filename'', ``EF'', ``EDV'', ``ESV'', ``LargeIndex'',
             ``SmallIndex'', ``LargeFrame'', ``SmallFrame'', ``LargeTrace'',
@@ -94,21 +95,27 @@ class Echo(torch.utils.data.Dataset):
         if self.split == "EXTERNAL_TEST":
             self.fnames = sorted(os.listdir(self.external_test_location))
         else:
+            # Load video-level labels
             with open(self.folder / "FileList.csv") as f:
-                self.header = f.readline().strip().split(",")
-                filenameIndex = self.header.index("FileName")
-                splitIndex = self.header.index("Split")
+                data = pandas.read_csv(f)
+            data["Split"].map(lambda x: x.upper())
 
-                for line in f:
-                    lineSplit = line.strip().split(',')
+            if self.split != "ALL":
+                data = data[data["Split"] == self.split]
 
-                    fileName = lineSplit[filenameIndex]
-                    fileMode = lineSplit[splitIndex].upper()
+            self.header = data.columns.tolist()
+            self.fnames = data["FileName"].tolist()
+            self.outcome = data.values.tolist()
 
-                    if self.split in ["all", fileMode] and os.path.exists(self.folder / "Videos" / fileName):
-                        self.fnames.append(fileName)
-                        self.outcome.append(lineSplit)
+            # Check that files are present
+            missing = set(self.fnames) - set(os.listdir(self.folder / "Videos"))
+            if len(missing) != 0:
+                print("{} videos could not be found in {}:".format(len(missing), self.folder / "Videos"))
+                for f in sorted(missing):
+                    print("\t", f)
+                raise FileNotFoundError(self.folder / "Videos" / sorted(missing)[0])
 
+            # Load traces
             self.frames = collections.defaultdict(list)
             self.trace = collections.defaultdict(_defaultdict_of_lists)
 
