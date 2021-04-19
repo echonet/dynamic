@@ -106,6 +106,7 @@ class Echo(torchvision.datasets.VisionDataset):
 
             self.header = data.columns.tolist()
             self.fnames = data["FileName"].tolist()
+            self.fnames = [fn + ".avi" for fn in self.fnames if os.path.splitext(fn)[1] == ""]  # Assume avi if no suffix
             self.outcome = data.values.tolist()
 
             # Check that files are present
@@ -138,7 +139,8 @@ class Echo(torchvision.datasets.VisionDataset):
                 for frame in self.frames[filename]:
                     self.trace[filename][frame] = np.array(self.trace[filename][frame])
 
-            keep = [len(self.frames[os.path.splitext(f)[0]]) >= 2 for f in self.fnames]
+            # A small number of videos are missing traces; remove these videos
+            keep = [len(self.frames[f]) >= 2 for f in self.fnames]
             self.fnames = [f for (f, k) in zip(self.fnames, keep) if k]
             self.outcome = [f for (f, k) in zip(self.outcome, keep) if k]
 
@@ -206,7 +208,7 @@ class Echo(torchvision.datasets.VisionDataset):
         # Gather targets
         target = []
         for t in self.target_type:
-            key = os.path.splitext(self.fnames[index])[0]
+            key = self.fnames[index]
             if t == "Filename":
                 target.append(self.fnames[index])
             elif t == "LargeIndex":
