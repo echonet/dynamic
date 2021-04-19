@@ -16,6 +16,7 @@ import echonet
 
 def run(num_epochs=45,
         modelname="r2plus1d_18",
+        weights=None,
         tasks="EF",
         frames=32,
         period=2,
@@ -87,6 +88,10 @@ def run(num_epochs=45,
     if device.type == "cuda":
         model = torch.nn.DataParallel(model)
     model.to(device)
+
+    if weights is not None:
+        checkpoint = torch.load(weights)
+        model.load_state_dict(checkpoint['state_dict'])
 
     # Set up optimizer
     optim = torch.optim.SGD(model.parameters(), lr=1e-4, momentum=0.9, weight_decay=1e-4)
@@ -170,10 +175,11 @@ def run(num_epochs=45,
                 bestLoss = loss
 
         # Load best weights
-        checkpoint = torch.load(os.path.join(output, "best.pt"))
-        model.load_state_dict(checkpoint['state_dict'])
-        f.write("Best validation loss {} from epoch {}\n".format(checkpoint["loss"], checkpoint["epoch"]))
-        f.flush()
+        if num_epochs != 0:
+            checkpoint = torch.load(os.path.join(output, "best.pt"))
+            model.load_state_dict(checkpoint['state_dict'])
+            f.write("Best validation loss {} from epoch {}\n".format(checkpoint["loss"], checkpoint["epoch"]))
+            f.flush()
 
         if run_test:
             for split in ["val", "test"]:

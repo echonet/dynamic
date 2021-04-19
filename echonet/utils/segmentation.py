@@ -17,6 +17,7 @@ import echonet
 
 def run(num_epochs=50,
         modelname="deeplabv3_resnet50",
+        weights=None,
         pretrained=False,
         output=None,
         device=None,
@@ -90,6 +91,10 @@ def run(num_epochs=50,
     if device.type == "cuda":
         model = torch.nn.DataParallel(model)
     model.to(device)
+
+    if weights is not None:
+        checkpoint = torch.load(weights)
+        model.load_state_dict(checkpoint['state_dict'])
 
     # Set up optimizer
     optim = torch.optim.SGD(model.parameters(), lr=1e-5, momentum=0.9)
@@ -175,9 +180,10 @@ def run(num_epochs=50,
                 bestLoss = loss
 
         # Load best weights
-        checkpoint = torch.load(os.path.join(output, "best.pt"))
-        model.load_state_dict(checkpoint['state_dict'])
-        f.write("Best validation loss {} from epoch {}\n".format(checkpoint["loss"], checkpoint["epoch"]))
+        if num_epochs != 0:
+            checkpoint = torch.load(os.path.join(output, "best.pt"))
+            model.load_state_dict(checkpoint['state_dict'])
+            f.write("Best validation loss {} from epoch {}\n".format(checkpoint["loss"], checkpoint["epoch"]))
 
         if run_test:
             # Run on validation and test
