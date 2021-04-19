@@ -244,7 +244,7 @@ class Echo(torchvision.datasets.VisionDataset):
             if self.target_transform is not None:
                 target = self.target_transform(target)
 
-        # Select random clips
+        # Select clips from video
         video = tuple(video[:, s + self.period * np.arange(length), :, :] for s in start)
         if self.clips == 1:
             video = video[0]
