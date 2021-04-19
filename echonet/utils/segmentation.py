@@ -4,6 +4,7 @@ import math
 import os
 import time
 
+import click
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal
@@ -15,60 +16,87 @@ import tqdm
 import echonet
 
 
-def run(num_epochs=50,
-        data_dir=None,
-        modelname="deeplabv3_resnet50",
-        weights=None,
-        pretrained=False,
-        output=None,
-        device=None,
-        n_train_patients=None,
-        num_workers=4,
-        batch_size=20,
-        seed=0,
-        lr_step_period=None,
-        save_segmentation=False,
-        block_size=1024,
-        run_test=False):
+@click.command("segmentation")
+@click.option("--data_dir", type=click.Path(exists=True, file_okay=False), default=None)
+@click.option("--output", type=click.Path(file_okay=False), default=None)
+@click.option("--model_name", type=click.Choice(
+    sorted(name for name in torchvision.models.segmentation.__dict__
+           if name.islower() and not name.startswith("__") and
+           callable(torchvision.models.segmentation.__dict__[name]))),
+    default="deeplabv3_resnet50")
+@click.option("--pretrained/--random", default=False)
+@click.option("--weights", type=click.Path(exists=True, dir_okay=False), default=None)
+@click.option("--run_test/--skip_test", default=False)
+@click.option("--save_video/--skip_video", default=False)
+@click.option("--num_epochs", type=int, default=50)
+@click.option("--lr", type=float, default=1e-5)
+@click.option("--weight_decay", type=float, default=0)
+@click.option("--lr_step_period", type=int, default=None)
+@click.option("--num_train_patients", type=int, default=None)
+@click.option("--num_workers", type=int, default=4)
+@click.option("--batch_size", type=int, default=20)
+@click.option("--device", type=str, default=None)
+@click.option("--seed", type=int, default=0)
+@click.option("--full/--last", default=True)  # TODO skip
+def run(
+    data_dir=None,
+    output=None,
+
+    model_name="deeplabv3_resnet50",
+    pretrained=False,
+    weights=None,
+
+    run_test=False,
+    save_video=False,
+    num_epochs=50,
+    lr=1e-5,
+    weight_decay=1e-5,
+    lr_step_period=None,
+    num_train_patients=None,
+    num_workers=4,
+    batch_size=20,
+    device=None,
+    seed=0,
+):
     """Trains/tests segmentation model.
 
     Args:
-        num_epochs (int, optional): Number of epochs during training
-            Defaults to 50.
-        modelname (str, optional): Name of segmentation model. One of ``deeplabv3_resnet50'',
+        data_dir (str, optional): Directory containing dataset. Defaults to
+            `echonet.config.DATA_DIR`.
+        output (str, optional): Directory to place outputs. Defaults to
+            output/segmentation/<model_name>_<pretrained/random>/.
+        model_name (str, optional): Name of segmentation model. One of ``deeplabv3_resnet50'',
             ``deeplabv3_resnet101'', ``fcn_resnet50'', or ``fcn_resnet101''
-            (options are torchvision.models.segmentation.<modelname>)
+            (options are torchvision.models.segmentation.<model_name>)
             Defaults to ``deeplabv3_resnet50''.
         pretrained (bool, optional): Whether to use pretrained weights for model
             Defaults to False.
-        output (str or None, optional): Name of directory to place outputs
-            Defaults to None (replaced by output/segmentation/<modelname>_<pretrained/random>/).
-        device (str or None, optional): Name of device to run on. See
-            https://pytorch.org/docs/stable/tensor_attributes.html#torch.torch.device
-            for options. If ``None'', defaults to ``cuda'' if available, and ``cpu'' otherwise.
-            Defaults to ``None''.
-        n_train_patients (str or None, optional): Number of training patients. Used to ablations
-            on number of training patients. If ``None'', all patients used.
-            Defaults to ``None''.
-        num_workers (int, optional): how many subprocesses to use for data
-            loading. If 0, the data will be loaded in the main process.
-            Defaults to 4.
-        batch_size (int, optional): how many samples per batch to load
-            Defaults to 20.
-        seed (int, optional): Seed for random number generator.
+        weights (str, optional): Path to checkpoint containing weights to
+            initialize model. Defaults to None.
+        run_test (bool, optional): Whether or not to run on test.
+            Defaults to False.
+        save_video (bool, optional): Whether to save videos with segmentations.
+            Defaults to False.
+        num_epochs (int, optional): Number of epochs during training
+            Defaults to 50.
+        lr (float, optional): Learning rate for SGD
+            Defaults to 1e-5.
+        weight_decay (float, optional): Weight decay for SGD
             Defaults to 0.
         lr_step_period (int or None, optional): Period of learning rate decay
             (learning rate is decayed by a multiplicative factor of 0.1)
-            If ``None'', learning rate is not decayed.
-            Defaults to ``None''.
-        save_segmentation (bool, optional): Whether to save videos with segmentations.
-            Defaults to False.
-        block_size (int, optional): Number of frames to segment simultaneously when saving
-            videos with segmentation (this is used to adjust the memory usage on GPU; decrease
-            this is GPU memory issues occur).
-            Defaults to 1024.
-        run_test (bool, optional): Whether or not to run on test.
-            Defaults to False.
+            Defaults to math.inf (never decay learning rate).
+        num_train_patients (int or None, optional): Number of training patients
+            for ablations. Defaults to all patients.
+        num_workers (int, optional): Number of subprocesses to use for data
+            loading. If 0, the data will be loaded in the main process.
+            Defaults to 4.
+        device (str or None, optional): Name of device to run on. Options from
+            https://pytorch.org/docs/stable/tensor_attributes.html#torch.torch.device
+            Defaults to ``cuda'' if available, and ``cpu'' otherwise.
+        batch_size (int, optional): Number of samples to load per batch
+            Defaults to 20.
+        seed (int, optional): Seed for random number generator. Defaults to 0.
     """
 
     # Seed RNGs
@@ -77,16 +105,15 @@ def run(num_epochs=50,
 
     # Set default output directory
     if output is None:
-        output = os.path.join("output", "segmentation", "{}_{}".format(modelname, "pretrained" if pretrained else "random"))
+        output = os.path.join("output", "segmentation", "{}_{}".format(model_name, "pretrained" if pretrained else "random"))
     os.makedirs(output, exist_ok=True)
 
     # Set device for computations
     if device is None:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Set up model
-    model = torchvision.models.segmentation.__dict__[modelname](pretrained=pretrained, aux_loss=False)
+    model = torchvision.models.segmentation.__dict__[model_name](pretrained=pretrained, aux_loss=False)
 
     model.classifier[-1] = torch.nn.Conv2d(model.classifier[-1].in_channels, 1, kernel_size=model.classifier[-1].kernel_size)  # change number of outputs to 1
     if device.type == "cuda":
@@ -98,7 +125,7 @@ def run(num_epochs=50,
         model.load_state_dict(checkpoint['state_dict'])
 
     # Set up optimizer
-    optim = torch.optim.SGD(model.parameters(), lr=1e-5, momentum=0.9)
+    optim = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
     if lr_step_period is None:
         lr_step_period = math.inf
     scheduler = torch.optim.lr_scheduler.StepLR(optim, lr_step_period)
@@ -114,12 +141,11 @@ def run(num_epochs=50,
     # Set up datasets and dataloaders
     dataset = {}
     dataset["train"] = echonet.datasets.Echo(root=data_dir, split="train", **kwargs)
-    if n_train_patients is not None and len(dataset["train"]) > n_train_patients:
+    if num_train_patients is not None and len(dataset["train"]) > num_train_patients:
         # Subsample patients (used for ablation experiment)
-        indices = np.random.choice(len(dataset["train"]), n_train_patients, replace=False)
+        indices = np.random.choice(len(dataset["train"]), num_train_patients, replace=False)
         dataset["train"] = torch.utils.data.Subset(dataset["train"], indices)
     dataset["val"] = echonet.datasets.Echo(root=data_dir, split="val", **kwargs)
-
 
     # Run training and testing loops
     with open(os.path.join(output, "log.csv"), "a") as f:
@@ -216,7 +242,7 @@ def run(num_epochs=50,
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=10, num_workers=num_workers, shuffle=False, pin_memory=False, collate_fn=_video_collate_fn)
 
     # Save videos with segmentation
-    if save_segmentation and not all(os.path.isfile(os.path.join(output, "videos", f)) for f in dataloader.dataset.fnames):
+    if save_video and not all(os.path.isfile(os.path.join(output, "videos", f)) for f in dataloader.dataset.fnames):
         # Only run if missing videos
 
         model.eval()
@@ -231,7 +257,7 @@ def run(num_epochs=50,
                 for (x, (filenames, large_index, small_index), length) in tqdm.tqdm(dataloader):
                     # Run segmentation model on blocks of frames one-by-one
                     # The whole concatenated video may be too long to run together
-                    y = np.concatenate([model(x[i:(i + block_size), :, :, :].to(device))["out"].detach().cpu().numpy() for i in range(0, x.shape[0], block_size)])
+                    y = np.concatenate([model(x[i:(i + batch_size), :, :, :].to(device))["out"].detach().cpu().numpy() for i in range(0, x.shape[0], batch_size)])
 
                     start = 0
                     x = x.numpy()

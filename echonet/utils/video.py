@@ -4,6 +4,7 @@ import math
 import os
 import time
 
+import click
 import matplotlib.pyplot as plt
 import numpy as np
 import sklearn.metrics
@@ -14,58 +15,95 @@ import tqdm
 import echonet
 
 
-def run(num_epochs=45,
-        data_dir=None,
-        modelname="r2plus1d_18",
-        weights=None,
-        tasks="EF",
-        frames=32,
-        period=2,
-        pretrained=True,
-        output=None,
-        device=None,
-        n_train_patients=None,
-        num_workers=5,
-        batch_size=20,
-        seed=0,
-        lr_step_period=15,
-        run_test=False):
+@click.command("video")
+@click.option("--data_dir", type=click.Path(exists=True, file_okay=False), default=None)
+@click.option("--output", type=click.Path(file_okay=False), default=None)
+@click.option("--task", type=str, default="EF")
+@click.option("--model_name", type=click.Choice(
+    sorted(name for name in torchvision.models.video.__dict__
+           if name.islower() and not name.startswith("__") and
+           callable(torchvision.models.video.__dict__[name]))),
+    default="r2plus1d_18")
+@click.option("--pretrained/--random", default=True)
+@click.option("--weights", type=click.Path(exists=True, dir_okay=False), default=None)
+@click.option("--run_test/--skip_test", default=False)
+@click.option("--num_epochs", type=int, default=45)
+@click.option("--lr", type=float, default=1e-4)
+@click.option("--weight_decay", type=float, default=1e-4)
+@click.option("--lr_step_period", type=int, default=15)
+@click.option("--frames", type=int, default=32)
+@click.option("--period", type=int, default=32)
+@click.option("--num_train_patients", type=int, default=None)
+@click.option("--num_workers", type=int, default=4)
+@click.option("--batch_size", type=int, default=20)
+@click.option("--device", type=str, default=None)
+@click.option("--seed", type=int, default=0)
+def run(
+    data_dir=None,
+    output=None,
+    task="EF",
+
+    model_name="r2plus1d_18",
+    pretrained=True,
+    weights=None,
+
+    run_test=False,
+    num_epochs=45,
+    lr=1e-4,
+    weight_decay=1e-4,
+    lr_step_period=15,
+    frames=32,
+    period=2,
+    num_train_patients=None,
+    num_workers=4,
+    batch_size=20,
+    device=None,
+    seed=0,
+):
     """Trains/tests EF prediction model.
 
+    \b
     Args:
-        num_epochs (int, optional): Number of epochs during training
-            Defaults to 45.
-        modelname (str, optional): Name of model. One of ``mc3_18'',
+        data_dir (str, optional): Directory containing dataset. Defaults to
+            `echonet.config.DATA_DIR`.
+        output (str, optional): Directory to place outputs. Defaults to
+            output/video/<model_name>_<pretrained/random>/.
+        task (str, optional): Name of task to predict. Options are the headers
+            of FileList.csv. Defaults to ``EF''.
+        model_name (str, optional): Name of model. One of ``mc3_18'',
             ``r2plus1d_18'', or ``r3d_18''
-            (options are torchvision.models.video.<modelname>)
+            (options are torchvision.models.video.<model_name>)
             Defaults to ``r2plus1d_18''.
-        tasks (str, optional): Name of task to predict. Options are the headers
-            of FileList.csv.
-            Defaults to ``EF''.
         pretrained (bool, optional): Whether to use pretrained weights for model
             Defaults to True.
-        output (str or None, optional): Name of directory to place outputs
-            Defaults to None (replaced by output/video/<modelname>_<pretrained/random>/).
-        device (str or None, optional): Name of device to run on. See
-            https://pytorch.org/docs/stable/tensor_attributes.html#torch.torch.device
-            for options. If ``None'', defaults to ``cuda'' if available, and ``cpu'' otherwise.
-            Defaults to ``None''.
-        n_train_patients (str or None, optional): Number of training patients. Used to ablations
-            on number of training patients. If ``None'', all patients used.
-            Defaults to ``None''.
-        num_workers (int, optional): how many subprocesses to use for data
-            loading. If 0, the data will be loaded in the main process.
-            Defaults to 5.
-        batch_size (int, optional): how many samples per batch to load
-            Defaults to 20.
-        seed (int, optional): Seed for random number generator.
-            Defaults to 0.
-        lr_step_period (int or None, optional): Period of learning rate decay
-            (learning rate is decayed by a multiplicative factor of 0.1)
-            If ``None'', learning rate is not decayed.
-            Defaults to 15.
+        weights (str, optional): Path to checkpoint containing weights to
+            initialize model. Defaults to None.
         run_test (bool, optional): Whether or not to run on test.
             Defaults to False.
+        num_epochs (int, optional): Number of epochs during training.
+            Defaults to 45.
+        lr (float, optional): Learning rate for SGD
+            Defaults to 1e-4.
+        weight_decay (float, optional): Weight decay for SGD
+            Defaults to 1e-4.
+        lr_step_period (int or None, optional): Period of learning rate decay
+            (learning rate is decayed by a multiplicative factor of 0.1)
+            Defaults to 15.
+        frames (int, optional): Number of frames to use in clip
+            Defaults to 32.
+        period (int, optional): Sampling period for frames
+            Defaults to 2.
+        n_train_patients (int or None, optional): Number of training patients
+            for ablations. Defaults to all patients.
+        num_workers (int, optional): Number of subprocesses to use for data
+            loading. If 0, the data will be loaded in the main process.
+            Defaults to 4.
+        device (str or None, optional): Name of device to run on. Options from
+            https://pytorch.org/docs/stable/tensor_attributes.html#torch.torch.device
+            Defaults to ``cuda'' if available, and ``cpu'' otherwise.
+        batch_size (int, optional): Number of samples to load per batch
+            Defaults to 20.
+        seed (int, optional): Seed for random number generator. Defaults to 0.
     """
 
     # Seed RNGs
@@ -74,7 +112,7 @@ def run(num_epochs=45,
 
     # Set default output directory
     if output is None:
-        output = os.path.join("output", "video", "{}_{}_{}_{}".format(modelname, frames, period, "pretrained" if pretrained else "random"))
+        output = os.path.join("output", "video", "{}_{}_{}_{}".format(model_name, frames, period, "pretrained" if pretrained else "random"))
     os.makedirs(output, exist_ok=True)
 
     # Set device for computations
@@ -82,7 +120,7 @@ def run(num_epochs=45,
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Set up model
-    model = torchvision.models.video.__dict__[modelname](pretrained=pretrained)
+    model = torchvision.models.video.__dict__[model_name](pretrained=pretrained)
 
     model.fc = torch.nn.Linear(model.fc.in_features, 1)
     model.fc.bias.data[0] = 55.6
@@ -95,14 +133,14 @@ def run(num_epochs=45,
         model.load_state_dict(checkpoint['state_dict'])
 
     # Set up optimizer
-    optim = torch.optim.SGD(model.parameters(), lr=1e-4, momentum=0.9, weight_decay=1e-4)
+    optim = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
     if lr_step_period is None:
         lr_step_period = math.inf
     scheduler = torch.optim.lr_scheduler.StepLR(optim, lr_step_period)
 
     # Compute mean and std
     mean, std = echonet.utils.get_mean_and_std(echonet.datasets.Echo(root=data_dir, split="train"))
-    kwargs = {"target_type": tasks,
+    kwargs = {"target_type": task,
               "mean": mean,
               "std": std,
               "length": frames,
@@ -112,9 +150,9 @@ def run(num_epochs=45,
     # Set up datasets and dataloaders
     dataset = {}
     dataset["train"] = echonet.datasets.Echo(root=data_dir, split="train", **kwargs, pad=12)
-    if n_train_patients is not None and len(dataset["train"]) > n_train_patients:
+    if num_train_patients is not None and len(dataset["train"]) > num_train_patients:
         # Subsample patients (used for ablation experiment)
-        indices = np.random.choice(len(dataset["train"]), n_train_patients, replace=False)
+        indices = np.random.choice(len(dataset["train"]), num_train_patients, replace=False)
         dataset["train"] = torch.utils.data.Subset(dataset["train"], indices)
     dataset["val"] = echonet.datasets.Echo(root=data_dir, split="val", **kwargs)
 
