@@ -155,7 +155,7 @@ def run(num_epochs=50,
                                                                     time.time() - start_time,
                                                                     large_inter.size,
                                                                     sum(torch.cuda.max_memory_allocated() for i in range(torch.cuda.device_count())),
-                                                                    sum(torch.cuda.max_memory_cached() for i in range(torch.cuda.device_count())),
+                                                                    sum(torch.cuda.max_memory_reserved() for i in range(torch.cuda.device_count())),
                                                                     batch_size))
                 f.flush()
             scheduler.step()
@@ -313,7 +313,7 @@ def run(num_epochs=50,
                                 video[:, :, d, int(round(f / len(size) * 200 + 10))] = np.array([0, 0, 225]).reshape((1, 3, 1))
 
                             # Get pixels for a circle centered on the pixel
-                            r, c = skimage.draw.circle(int(round(115 + 100 * s)), int(round(f / len(size) * 200 + 10)), 4.1)
+                            r, c = skimage.draw.disk((int(round(115 + 100 * s)), int(round(f / len(size) * 200 + 10))), 4.1)
 
                             # On the frame that's being shown, put a circle over the pixel
                             video[f, :, r, c] = 255.

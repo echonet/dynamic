@@ -147,7 +147,7 @@ def run(num_epochs=45,
                                                               time.time() - start_time,
                                                               y.size,
                                                               sum(torch.cuda.max_memory_allocated() for i in range(torch.cuda.device_count())),
-                                                              sum(torch.cuda.max_memory_cached() for i in range(torch.cuda.device_count())),
+                                                              sum(torch.cuda.max_memory_reserved() for i in range(torch.cuda.device_count())),
                                                               batch_size))
                 f.flush()
             scheduler.step()
