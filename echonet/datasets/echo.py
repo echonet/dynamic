@@ -1,6 +1,5 @@
 """EchoNet-Dynamic Dataset."""
 
-import pathlib
 import os
 import collections
 import pandas
@@ -70,12 +69,11 @@ class Echo(torchvision.datasets.VisionDataset):
                  noise=None,
                  target_transform=None,
                  external_test_location=None):
-        super().__init__(root, target_transform=target_transform)
-
         if root is None:
             root = echonet.config.DATA_DIR
 
-        self.root = pathlib.Path(root)
+        super().__init__(root, target_transform=target_transform)
+
         self.split = split.upper()
         if not isinstance(target_type, list):
             target_type = [target_type]
@@ -97,7 +95,7 @@ class Echo(torchvision.datasets.VisionDataset):
             self.fnames = sorted(os.listdir(self.external_test_location))
         else:
             # Load video-level labels
-            with open(self.root / "FileList.csv") as f:
+            with open(os.path.join(self.root, "FileList.csv")) as f:
                 data = pandas.read_csv(f)
             data["Split"].map(lambda x: x.upper())
 
@@ -110,18 +108,18 @@ class Echo(torchvision.datasets.VisionDataset):
             self.outcome = data.values.tolist()
 
             # Check that files are present
-            missing = set(self.fnames) - set(os.listdir(self.root / "Videos"))
+            missing = set(self.fnames) - set(os.listdir(os.path.join(self.root, "Videos")))
             if len(missing) != 0:
-                print("{} videos could not be found in {}:".format(len(missing), self.root / "Videos"))
+                print("{} videos could not be found in {}:".format(len(missing), os.path.join(self.root, "Videos")))
                 for f in sorted(missing):
                     print("\t", f)
-                raise FileNotFoundError(self.root / "Videos" / sorted(missing)[0])
+                raise FileNotFoundError(os.path.join(self.root, "Videos", sorted(missing)[0]))
 
             # Load traces
             self.frames = collections.defaultdict(list)
             self.trace = collections.defaultdict(_defaultdict_of_lists)
 
-            with open(self.root / "VolumeTracings.csv") as f:
+            with open(os.path.join(self.root, "VolumeTracings.csv")) as f:
                 header = f.readline().strip().split(",")
                 assert header == ["FileName", "X1", "Y1", "X2", "Y2", "Frame"]
 
