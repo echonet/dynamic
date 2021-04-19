@@ -16,6 +16,7 @@ import echonet
 
 
 def run(num_epochs=50,
+        data_dir=None,
         modelname="deeplabv3_resnet50",
         weights=None,
         pretrained=False,
@@ -103,7 +104,7 @@ def run(num_epochs=50,
     scheduler = torch.optim.lr_scheduler.StepLR(optim, lr_step_period)
 
     # Compute mean and std
-    mean, std = echonet.utils.get_mean_and_std(echonet.datasets.Echo(split="train"))
+    mean, std = echonet.utils.get_mean_and_std(echonet.datasets.Echo(root=data_dir, split="train"))
     tasks = ["LargeFrame", "SmallFrame", "LargeTrace", "SmallTrace"]
     kwargs = {"target_type": tasks,
               "mean": mean,
@@ -111,18 +112,14 @@ def run(num_epochs=50,
               }
 
     # Set up datasets and dataloaders
-    train_dataset = echonet.datasets.Echo(split="train", **kwargs)
-
-    if n_train_patients is not None and len(train_dataset) > n_train_patients:
+    dataset = {}
+    dataset["train"] = echonet.datasets.Echo(root=data_dir, split="train", **kwargs)
+    if n_train_patients is not None and len(dataset["train"]) > n_train_patients:
         # Subsample patients (used for ablation experiment)
-        indices = np.random.choice(len(train_dataset), n_train_patients, replace=False)
-        train_dataset = torch.utils.data.Subset(train_dataset, indices)
+        indices = np.random.choice(len(dataset["train"]), n_train_patients, replace=False)
+        dataset["train"] = torch.utils.data.Subset(dataset["train"], indices)
+    dataset["val"] = echonet.datasets.Echo(root=data_dir, split="val", **kwargs)
 
-    train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"), drop_last=True)
-    val_dataloader = torch.utils.data.DataLoader(
-        echonet.datasets.Echo(split="val", **kwargs), batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
-    dataloaders = {'train': train_dataloader, 'val': val_dataloader}
 
     # Run training and testing loops
     with open(os.path.join(output, "log.csv"), "a") as f:
@@ -147,7 +144,11 @@ def run(num_epochs=50,
                 for i in range(torch.cuda.device_count()):
                     torch.cuda.reset_peak_memory_stats(i)
 
-                loss, large_inter, large_union, small_inter, small_union = echonet.utils.segmentation.run_epoch(model, dataloaders[phase], phase == "train", optim, device)
+                ds = dataset[phase]
+                dataloader = torch.utils.data.DataLoader(
+                    ds, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"), drop_last=(phase == "train"))
+
+                loss, large_inter, large_union, small_inter, small_union = echonet.utils.segmentation.run_epoch(model, dataloader, phase == "train", optim, device)
                 overall_dice = 2 * (large_inter.sum() + small_inter.sum()) / (large_union.sum() + large_inter.sum() + small_union.sum() + small_inter.sum())
                 large_dice = 2 * large_inter.sum() / (large_union.sum() + large_inter.sum())
                 small_dice = 2 * small_inter.sum() / (small_union.sum() + small_inter.sum())
@@ -188,7 +189,7 @@ def run(num_epochs=50,
         if run_test:
             # Run on validation and test
             for split in ["val", "test"]:
-                dataset = echonet.datasets.Echo(split=split, **kwargs)
+                dataset = echonet.datasets.Echo(root=data_dir, split=split, **kwargs)
                 dataloader = torch.utils.data.DataLoader(dataset,
                                                          batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
                 loss, large_inter, large_union, small_inter, small_union = echonet.utils.segmentation.run_epoch(model, dataloader, False, None, device)
@@ -207,7 +208,7 @@ def run(num_epochs=50,
                 f.flush()
 
     # Saving videos with segmentations
-    dataset = echonet.datasets.Echo(split="test",
+    dataset = echonet.datasets.Echo(root=data_dir, split="test",
                                     target_type=["Filename", "LargeIndex", "SmallIndex"],  # Need filename for saving, and human-selected frames to annotate
                                     mean=mean, std=std,  # Normalization
                                     length=None, max_length=None, period=1  # Take all frames

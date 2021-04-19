@@ -15,6 +15,7 @@ import echonet
 
 
 def run(num_epochs=45,
+        data_dir=None,
         modelname="r2plus1d_18",
         weights=None,
         tasks="EF",
@@ -100,7 +101,7 @@ def run(num_epochs=45,
     scheduler = torch.optim.lr_scheduler.StepLR(optim, lr_step_period)
 
     # Compute mean and std
-    mean, std = echonet.utils.get_mean_and_std(echonet.datasets.Echo(split="train"))
+    mean, std = echonet.utils.get_mean_and_std(echonet.datasets.Echo(root=data_dir, split="train"))
     kwargs = {"target_type": tasks,
               "mean": mean,
               "std": std,
@@ -109,17 +110,13 @@ def run(num_epochs=45,
               }
 
     # Set up datasets and dataloaders
-    train_dataset = echonet.datasets.Echo(split="train", **kwargs, pad=12)
-    if n_train_patients is not None and len(train_dataset) > n_train_patients:
+    dataset = {}
+    dataset["train"] = echonet.datasets.Echo(root=data_dir, split="train", **kwargs, pad=12)
+    if n_train_patients is not None and len(dataset["train"]) > n_train_patients:
         # Subsample patients (used for ablation experiment)
-        indices = np.random.choice(len(train_dataset), n_train_patients, replace=False)
-        train_dataset = torch.utils.data.Subset(train_dataset, indices)
-
-    train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"), drop_last=True)
-    val_dataloader = torch.utils.data.DataLoader(
-        echonet.datasets.Echo(split="val", **kwargs), batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
-    dataloaders = {'train': train_dataloader, 'val': val_dataloader}
+        indices = np.random.choice(len(dataset["train"]), n_train_patients, replace=False)
+        dataset["train"] = torch.utils.data.Subset(dataset["train"], indices)
+    dataset["val"] = echonet.datasets.Echo(root=data_dir, split="val", **kwargs)
 
     # Run training and testing loops
     with open(os.path.join(output, "log.csv"), "a") as f:
@@ -144,7 +141,11 @@ def run(num_epochs=45,
                 for i in range(torch.cuda.device_count()):
                     torch.cuda.reset_peak_memory_stats(i)
 
-                loss, yhat, y = echonet.utils.video.run_epoch(model, dataloaders[phase], phase == "train", optim, device)
+                ds = dataset[phase]
+                dataloader = torch.utils.data.DataLoader(
+                    ds, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"), drop_last=(phase == "train"))
+
+                loss, yhat, y = echonet.utils.video.run_epoch(model, dataloader, phase == "train", optim, device)
                 f.write("{},{},{},{},{},{},{},{},{}\n".format(epoch,
                                                               phase,
                                                               loss,
@@ -185,7 +186,7 @@ def run(num_epochs=45,
             for split in ["val", "test"]:
                 # Performance without test-time augmentation
                 dataloader = torch.utils.data.DataLoader(
-                    echonet.datasets.Echo(split=split, **kwargs),
+                    echonet.datasets.Echo(root=data_dir, split=split, **kwargs),
                     batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=(device.type == "cuda"))
                 loss, yhat, y = echonet.utils.video.run_epoch(model, dataloader, False, None, device)
                 f.write("{} (one clip) R2:   {:.3f} ({:.3f} - {:.3f})\n".format(split, *echonet.utils.bootstrap(y, yhat, sklearn.metrics.r2_score)))
@@ -194,7 +195,7 @@ def run(num_epochs=45,
                 f.flush()
 
                 # Performance with test-time augmentation
-                ds = echonet.datasets.Echo(split=split, **kwargs, clips="all")
+                ds = echonet.datasets.Echo(root=data_dir, split=split, **kwargs, clips="all")
                 dataloader = torch.utils.data.DataLoader(
                     ds, batch_size=1, num_workers=num_workers, shuffle=False, pin_memory=(device.type == "cuda"))
                 loss, yhat, y = echonet.utils.video.run_epoch(model, dataloader, False, None, device, save_all=True, block_size=batch_size)
