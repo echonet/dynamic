@@ -1,6 +1,5 @@
 """EchoNet-Dynamic Dataset."""
 
-import pathlib
 import os
 import collections
 import pandas
@@ -70,12 +69,11 @@ class Echo(torchvision.datasets.VisionDataset):
                  noise=None,
                  target_transform=None,
                  external_test_location=None):
-        super().__init__(root, target_transform=target_transform)
-
         if root is None:
             root = echonet.config.DATA_DIR
 
-        self.root = pathlib.Path(root)
+        super().__init__(root, target_transform=target_transform)
+
         self.split = split.upper()
         if not isinstance(target_type, list):
             target_type = [target_type]
@@ -97,7 +95,7 @@ class Echo(torchvision.datasets.VisionDataset):
             self.fnames = sorted(os.listdir(self.external_test_location))
         else:
             # Load video-level labels
-            with open(self.root / "FileList.csv") as f:
+            with open(os.path.join(self.root, "FileList.csv")) as f:
                 data = pandas.read_csv(f)
             data["Split"].map(lambda x: x.upper())
 
@@ -106,21 +104,22 @@ class Echo(torchvision.datasets.VisionDataset):
 
             self.header = data.columns.tolist()
             self.fnames = data["FileName"].tolist()
+            self.fnames = [fn + ".avi" for fn in self.fnames if os.path.splitext(fn)[1] == ""]  # Assume avi if no suffix
             self.outcome = data.values.tolist()
 
             # Check that files are present
-            missing = set(self.fnames) - set(os.listdir(self.root / "Videos"))
+            missing = set(self.fnames) - set(os.listdir(os.path.join(self.root, "Videos")))
             if len(missing) != 0:
-                print("{} videos could not be found in {}:".format(len(missing), self.root / "Videos"))
+                print("{} videos could not be found in {}:".format(len(missing), os.path.join(self.root, "Videos")))
                 for f in sorted(missing):
                     print("\t", f)
-                raise FileNotFoundError(self.root / "Videos" / sorted(missing)[0])
+                raise FileNotFoundError(os.path.join(self.root, "Videos", sorted(missing)[0]))
 
             # Load traces
             self.frames = collections.defaultdict(list)
             self.trace = collections.defaultdict(_defaultdict_of_lists)
 
-            with open(self.root / "VolumeTracings.csv") as f:
+            with open(os.path.join(self.root, "VolumeTracings.csv")) as f:
                 header = f.readline().strip().split(",")
                 assert header == ["FileName", "X1", "Y1", "X2", "Y2", "Frame"]
 
@@ -138,7 +137,8 @@ class Echo(torchvision.datasets.VisionDataset):
                 for frame in self.frames[filename]:
                     self.trace[filename][frame] = np.array(self.trace[filename][frame])
 
-            keep = [len(self.frames[os.path.splitext(f)[0]]) >= 2 for f in self.fnames]
+            # A small number of videos are missing traces; remove these videos
+            keep = [len(self.frames[f]) >= 2 for f in self.fnames]
             self.fnames = [f for (f, k) in zip(self.fnames, keep) if k]
             self.outcome = [f for (f, k) in zip(self.outcome, keep) if k]
 
@@ -206,7 +206,7 @@ class Echo(torchvision.datasets.VisionDataset):
         # Gather targets
         target = []
         for t in self.target_type:
-            key = os.path.splitext(self.fnames[index])[0]
+            key = self.fnames[index]
             if t == "Filename":
                 target.append(self.fnames[index])
             elif t == "LargeIndex":
@@ -244,7 +244,7 @@ class Echo(torchvision.datasets.VisionDataset):
             if self.target_transform is not None:
                 target = self.target_transform(target)
 
-        # Select random clips
+        # Select clips from video
         video = tuple(video[:, s + self.period * np.arange(length), :, :] for s in start)
         if self.clips == 1:
             video = video[0]

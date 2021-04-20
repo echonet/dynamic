@@ -69,10 +69,7 @@ We describe our full hyperparameter sweep in the next section.
 
 #### Frame-by-frame Semantic Segmentation of the Left Ventricle
 
-    cmd="import echonet; echonet.utils.segmentation.run(modelname=\"deeplabv3_resnet50\",
-                                                        save_segmentation=True,
-                                                        pretrained=False)"
-    python3 -c "${cmd}"
+    echonet segmentation --save_video
 
 This creates a directory named `output/segmentation/deeplabv3_resnet50_random/`, which will contain
   - log.csv: training and validation losses
@@ -82,12 +79,7 @@ This creates a directory named `output/segmentation/deeplabv3_resnet50_random/`,
 
 #### Prediction of Ejection Fraction from Subsampled Clips
 
-    cmd="import echonet; echonet.utils.video.run(modelname=\"r2plus1d_18\",
-                                                 frames=32,
-                                                 period=2,
-                                                 pretrained=True,
-                                                 batch_size=8)"
-    python3 -c "${cmd}"
+  echonet video
 
 This creates a directory named `output/video/r2plus1d_18_32_2_pretrained/`, which will contain
   - log.csv: training and validation losses

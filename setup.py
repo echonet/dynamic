@@ -22,6 +22,7 @@ setuptools.setup(
     url="https://echonet.github.io/dynamic",
     packages=setuptools.find_packages(),
     install_requires=[
+        "click",
         "numpy",
         "pandas",
         "torch",
@@ -33,5 +34,11 @@ setuptools.setup(
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
-    ]
+    ],
+    entry_points={
+        "console_scripts": [
+            "echonet=echonet:main",
+        ],
+    }
+
 )
