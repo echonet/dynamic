@@ -21,8 +21,7 @@ import echonet
 @click.option("--task", type=str, default="EF")
 @click.option("--model_name", type=click.Choice(
     sorted(name for name in torchvision.models.video.__dict__
-           if name.islower() and not name.startswith("__") and
-           callable(torchvision.models.video.__dict__[name]))),
+           if name.islower() and not name.startswith("__") and callable(torchvision.models.video.__dict__[name]))),
     default="r2plus1d_18")
 @click.option("--pretrained/--random", default=True)
 @click.option("--weights", type=click.Path(exists=True, dir_okay=False), default=None)

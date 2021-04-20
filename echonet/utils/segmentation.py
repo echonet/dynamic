@@ -21,8 +21,7 @@ import echonet
 @click.option("--output", type=click.Path(file_okay=False), default=None)
 @click.option("--model_name", type=click.Choice(
     sorted(name for name in torchvision.models.segmentation.__dict__
-           if name.islower() and not name.startswith("__") and
-           callable(torchvision.models.segmentation.__dict__[name]))),
+           if name.islower() and not name.startswith("__") and callable(torchvision.models.segmentation.__dict__[name]))),
     default="deeplabv3_resnet50")
 @click.option("--pretrained/--random", default=False)
 @click.option("--weights", type=click.Path(exists=True, dir_okay=False), default=None)
@@ -37,7 +36,6 @@ import echonet
 @click.option("--batch_size", type=int, default=20)
 @click.option("--device", type=str, default=None)
 @click.option("--seed", type=int, default=0)
-@click.option("--full/--last", default=True)  # TODO skip
 def run(
     data_dir=None,
     output=None,

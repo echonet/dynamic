@@ -4,17 +4,17 @@ functions for training and testing segmentation and ejection fraction
 prediction models.
 """
 
+import click
+
 from echonet.__version__ import __version__
 from echonet.config import CONFIG as config
 import echonet.datasets as datasets
 import echonet.utils as utils
 
-import click
-
 
 @click.group()
 def main():
-    pass
+    """Entry point for command line interface."""
 
 
 del click

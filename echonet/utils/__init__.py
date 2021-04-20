@@ -63,7 +63,7 @@ def savevideo(filename: str, array: np.ndarray, fps: typing.Union[float, int] = 
         None
     """
 
-    c, f, height, width = array.shape
+    c, _, height, width = array.shape
 
     if c != 3:
         raise ValueError("savevideo expects array of shape (channels=3, frames, height, width), got shape ({})".format(", ".join(map(str, array.shape))))
