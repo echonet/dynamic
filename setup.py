@@ -22,6 +22,7 @@ setuptools.setup(
     url="https://echonet.github.io/dynamic",
     packages=setuptools.find_packages(),
     install_requires=[
+        "click",
         "numpy",
         "pandas",
         "torch",
