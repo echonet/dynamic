@@ -32,7 +32,7 @@ import echonet
 @click.option("--weight_decay", type=float, default=1e-4)
 @click.option("--lr_step_period", type=int, default=15)
 @click.option("--frames", type=int, default=32)
-@click.option("--period", type=int, default=32)
+@click.option("--period", type=int, default=2)
 @click.option("--num_train_patients", type=int, default=None)
 @click.option("--num_workers", type=int, default=4)
 @click.option("--batch_size", type=int, default=20)
