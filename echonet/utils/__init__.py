@@ -70,8 +70,9 @@ def savevideo(filename: str, array: np.ndarray, fps: typing.Union[float, int] = 
     fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
     out = cv2.VideoWriter(filename, fourcc, fps, (width, height))
 
-    for i in range(f):
-        out.write(array[:, i, :, :].transpose((1, 2, 0)))
+    for frame in array.transpose((1, 2, 3, 0)):
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        out.write(frame)
 
 
 def get_mean_and_std(dataset: torch.utils.data.Dataset,
