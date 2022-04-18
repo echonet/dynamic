@@ -1,3 +1,0 @@
-Copyright Notice
-The authors are the proprietor of certain copyrights of and to EchoNet-Dynamic software, source code and associated material.  Code also contains source code created by certain third parties.  Redistribution and use of the Code with or without modification is not permitted without explicit written permission by the authors. 
-Copyright 2019 The authors.  All rights reserved.
