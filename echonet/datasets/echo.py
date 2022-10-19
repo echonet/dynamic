@@ -61,6 +61,7 @@ class Echo(torchvision.datasets.VisionDataset):
 
     def __init__(self, root=None,
                  split="train", target_type="EF",
+                 file_list = "/zfs/wficai/Data/echonet_data/EchoNet-Dynamic/FileList.csv",
                  mean=0., std=1.,
                  length=16, period=2,
                  max_length=250,
@@ -88,6 +89,7 @@ class Echo(torchvision.datasets.VisionDataset):
         self.noise = noise
         self.target_transform = target_transform
         self.external_test_location = external_test_location
+        self.file_list = file_list
 
         self.fnames, self.outcome = [], []
 
@@ -95,7 +97,7 @@ class Echo(torchvision.datasets.VisionDataset):
             self.fnames = sorted(os.listdir(self.external_test_location))
         else:
             # Load video-level labels
-            with open(os.path.join(self.root, "FileList.csv")) as f:
+            with open(self.file_list) as f:
                 data = pandas.read_csv(f)
             data["Split"].map(lambda x: x.upper())
 
