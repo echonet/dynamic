@@ -1,4 +1,4 @@
-certifi==2020.12.5
+certifi==2022.12.7
 cycler==0.10.0
 decorator==4.4.2
 echonet==1.0.0
